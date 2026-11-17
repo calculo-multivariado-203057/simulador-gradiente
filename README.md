@@ -28,15 +28,15 @@ incluidas en `vendor/`, de manera que el recurso seguirá funcionando aunque eso
 cambien de dirección o el estudiante trabaje sin conectividad, condición frecuente en las zonas
 rurales del Caribe colombiano en las que se sitúa el curso.
 
-## Publicación en GitHub Pages
+## Dónde está publicado
 
-1. Cree el repositorio y suba el contenido de esta carpeta a la rama `main`.
-2. En **Settings → Pages**, elija *Deploy from a branch*, rama `main`, carpeta `/ (root)`.
-3. En pocos minutos el simulador queda en
-   `https://USUARIO-GITHUB.github.io/simulador-gradiente-203057/`
-   y la hoja de apoyo en `.../simulador-gradiente-203057/ejemplo/`.
+| | |
+|---|---|
+| Simulador | https://calculo-multivariado-203057.github.io/simulador-gradiente/ |
+| Hoja de apoyo | https://calculo-multivariado-203057.github.io/simulador-gradiente/ejemplo/ |
 
-El archivo `.nojekyll` ya está incluido para que GitHub publique los archivos tal como están.
+El sitio se sirve con GitHub Pages desde la rama `main`, carpeta raíz. El archivo `.nojekyll`
+evita el procesamiento de Jekyll, de modo que los archivos se publican tal como están.
 
 ## Autoría y filiación
 
@@ -50,7 +50,7 @@ Barranquilla, Colombia
 
 Gutiérrez Duncan, P. E. (2026). *Simulador de gradiente y optimización con multiplicadores de
 Lagrange* (versión 1.0) [Software]. Universidad Nacional Abierta y a Distancia.
-https://github.com/USUARIO-GITHUB/simulador-gradiente-203057
+https://github.com/calculo-multivariado-203057/simulador-gradiente
 
 El archivo `CITATION.cff` permite que GitHub genere la cita automáticamente y que Zenodo la lea
 si decide asignarle un DOI.

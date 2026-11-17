@@ -10,8 +10,8 @@ type: software
 version: "1.0.0"
 date-released: "2026-11-17"
 license: CC-BY-NC-SA-4.0
-repository-code: "https://github.com/USUARIO-GITHUB/simulador-gradiente-203057"
-url: "https://USUARIO-GITHUB.github.io/simulador-gradiente-203057/"
+repository-code: "https://github.com/calculo-multivariado-203057/simulador-gradiente"
+url: "https://calculo-multivariado-203057.github.io/simulador-gradiente/"
 languages:
   - spa
 keywords:
