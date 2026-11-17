@@ -46,8 +46,6 @@ Escuela de Ciencias Básicas, Tecnología e Ingeniería (ECBTI)
 Universidad Nacional Abierta y a Distancia (UNAD) — CCAV Puerto Colombia, Zona Caribe
 Barranquilla, Colombia
 
-> Complete el ORCID en `CITATION.cff` antes de publicar la primera versión.
-
 ## Cómo citar
 
 Gutiérrez Duncan, P. E. (2026). *Simulador de gradiente y optimización con multiplicadores de
