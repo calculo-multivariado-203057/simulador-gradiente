@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ejemplo resuelto del simulador</title>
+<link href="../vendor/fuentes/fuentes.css" rel="stylesheet">
+<script>
+  window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+                     svg: { fontCache: 'global' }, options: { enableMenu: false } };
+</script>
+<script src="../vendor/mathjax/tex-svg.js"></script>
+<style>
+  /* Hoja de instrucciones: una sola columna de lectura, con una tabla de
+     tecleo por apartado. Pizarra institucional de la UNAD sobre papel frío. */
+  :root {
+    --papel: #f5f7fa; --carta: #ffffff; --tinta: #16202b; --suave: #5a6675;
+    --azul: #00406e; --ambar: #d99100; --teal: #0f766e;
+    --borde: #d6dde6; --marca: #eef3f8;
+    --display: "Bitter", Georgia, "Times New Roman", serif;
+    --texto: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel: #10161d; --carta: #18212b; --tinta: #e6ecf3; --suave: #9aa7b6;
+      --azul: #7cb8e8; --ambar: #f0b429; --teal: #5ecfc0;
+      --borde: #2c3845; --marca: #1d2833; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --papel: #10161d; --carta: #18212b; --tinta: #e6ecf3; --suave: #9aa7b6;
+    --azul: #7cb8e8; --ambar: #f0b429; --teal: #5ecfc0;
+    --borde: #2c3845; --marca: #1d2833; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--papel); color: var(--tinta); font-family: var(--texto); font-size: 17px; line-height: 1.6; }
+  .envoltura { max-width: 860px; margin: 0 auto; padding: 0 16px 4rem; }
+
+  header.portada { background: var(--carta); border-bottom: 3px solid var(--ambar); padding: 2.2rem 0 1.6rem; margin-bottom: 2rem; }
+  header.portada .envoltura { padding-bottom: 0; }
+  .eyebrow { font-family: var(--mono); font-size: .76rem; letter-spacing: .09em; text-transform: uppercase; color: var(--teal); font-weight: 600; }
+  h1 { font-family: var(--display); font-size: clamp(1.7rem, 4.5vw, 2.3rem); line-height: 1.18; margin: .35rem 0 .5rem; text-wrap: balance; color: var(--azul); }
+  header.portada p { color: var(--suave); max-width: 62ch; }
+
+  h2 { font-family: var(--display); font-size: 1.22rem; color: var(--azul); margin: 2.4rem 0 .7rem; text-wrap: balance; }
+  p { max-width: 68ch; margin-bottom: .75rem; }
+  ul, ol { margin: .5rem 0 .9rem 1.3rem; max-width: 66ch; }
+  li { margin: .3rem 0; }
+  code, kbd { font-family: var(--mono); font-size: .88em; background: var(--marca); padding: .1rem .32rem; border-radius: 4px; }
+  strong { font-weight: 600; }
+
+  .aviso { background: var(--marca); border-left: 4px solid var(--ambar); padding: .9rem 1.1rem; border-radius: 0 8px 8px 0; margin: 1.2rem 0; }
+  .aviso.teal { border-left-color: var(--teal); }
+  .aviso p:last-child { margin-bottom: 0; }
+
+  .problema { background: var(--carta); border: 1px solid var(--borde); border-radius: 10px; padding: 1.2rem 1.3rem; margin: 1.3rem 0 2rem; }
+  .problema dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin-top: .7rem; }
+  .problema dt { font-weight: 600; color: var(--suave); font-size: .92rem; }
+  @media (max-width: 520px) {
+    .problema dl { grid-template-columns: 1fr; gap: .1rem; }
+    .problema dd { margin-bottom: .55rem; }
+  }
+
+  .mapa { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; font-size: .93rem; }
+  .mapa th, .mapa td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  .mapa th { font-family: var(--mono); font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: var(--suave); font-weight: 600; border-bottom-width: 2px; }
+  .mapa tbody tr:last-child td { border-bottom: none; }
+  .mapa td.sim { color: var(--teal); font-weight: 600; }
+
+  .modulo { background: var(--carta); border: 1px solid var(--borde); border-radius: 10px; margin: 1.1rem 0; overflow: hidden; }
+  .modulo > header { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; padding: .85rem 1.15rem; background: var(--marca); border-bottom: 1px solid var(--borde); }
+  .sigla {
+    font-family: var(--mono); font-weight: 600; font-size: .8rem;
+    background: var(--azul); color: var(--carta);
+    min-width: 1.9rem; height: 1.9rem; padding: 0 .35rem; border-radius: 999px;
+    display: grid; place-items: center; flex: 0 0 auto;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sigla { color: #10161d; } }
+  :root[data-theme="dark"] .sigla { color: #10161d; }
+  .modulo > header h3 { font-family: var(--display); margin: 0; flex: 1; min-width: 12ch; font-size: 1.04rem; }
+  .origen { font-family: var(--mono); font-size: .74rem; color: var(--suave); letter-spacing: .04em; text-transform: uppercase; }
+  .modulo > .interior { padding: 1rem 1.15rem 1.15rem; }
+
+  .sub { border-top: 1px dashed var(--borde); padding-top: 1rem; margin-top: 1.2rem; }
+  .sub:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .item { font-family: var(--mono); font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); font-weight: 600; }
+  .item.opcional { color: var(--suave); }
+  .sub h4 { font-family: var(--display); font-size: .99rem; margin: .12rem 0 .45rem; }
+  .sub > p:last-of-type { margin-bottom: 0; }
+
+  .tabla-envoltura { overflow-x: auto; margin: .9rem 0 .2rem; }
+  table.teclado { border-collapse: collapse; width: 100%; min-width: 440px; font-size: .94rem; }
+  table.teclado th, table.teclado td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  table.teclado th { font-family: var(--mono); font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: var(--suave); font-weight: 600; border-bottom-width: 2px; }
+  td.campo { color: var(--suave); white-space: nowrap; }
+  td.teclea { font-family: var(--mono); font-weight: 600; color: var(--teal); }
+  table.teclado tbody tr:last-child td { border-bottom: none; }
+
+  .responde { margin-top: .9rem; padding: .75rem .95rem; border-radius: 8px; background: var(--marca); font-size: .94rem; }
+  .responde .etiqueta { display: block; font-family: var(--mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--teal); font-weight: 600; margin-bottom: .2rem; }
+  .responde table { border-collapse: collapse; margin-top: .5rem; font-size: .9rem; }
+  .responde th, .responde td { padding: .25rem .7rem .25rem 0; text-align: left; }
+  .responde th { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; color: var(--suave); }
+  .captura { margin-top: .8rem; padding-left: .85rem; border-left: 3px solid var(--ambar); font-size: .92rem; color: var(--suave); }
+  .captura strong { color: var(--tinta); }
+
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--borde); font-size: .88rem; color: var(--suave); }
+  a { color: var(--azul); text-underline-offset: 2px; }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+  mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+</style>
+</head>
+<body>
+
+<header class="portada">
+  <div class="envoltura">
+    <p class="eyebrow">Fase 2 · Cálculo Multivariado 203057</p>
+    <h1>Cómo usar el simulador en la Actividad 2 y en la Actividad 4</h1>
+    <p>Un recorrido completo con un problema de práctica, para que usted vea qué se escribe
+    en cada casilla antes de trabajar con el suyo.</p>
+  </div>
+</header>
+
+<div class="envoltura">
+
+  <h2>Dónde entra el simulador y dónde no</h2>
+  <p>El Apéndice 1 convoca una herramienta distinta en cada actividad. El simulador cubre
+  únicamente los ítems marcados abajo: el resto es trabajo suyo, con GeoGebra o con lápiz y papel.</p>
+  <table class="mapa">
+    <thead><tr><th>Actividad</th><th>Herramienta</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Exploración e interpretación</td><td>GeoGebra 3D para la superficie y las curvas de nivel</td></tr>
+      <tr><td>2 · Gradiente</td><td>Ítems I y II a mano; <span class="sim">ítem III en el simulador</span></td></tr>
+      <tr><td>3 · Planteamiento restringido</td><td>Todo analítico: punto crítico, hessiano y sistema de Lagrange</td></tr>
+      <tr><td>4 · Solución y decisión</td><td><span class="sim">Ítems I, II y III en el simulador</span>; ítem IV es su interpretación</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <p><strong>El problema de esta hoja no es ninguno de los cinco del Apéndice 1.</strong>
+    Es un problema de práctica, con números cómodos, que sirve para aprender el manejo del
+    simulador. Cuando termine de leerlo, vuelva al simulador con la función, el punto y la
+    restricción que las Tablas 2, 4 y 6 asignan a <em>su</em> letra.</p>
+  </div>
+
+  <div class="problema">
+    <p class="eyebrow">Problema de práctica</p>
+    <p style="margin-top:.4rem">Un taller de prototipado evalúa el rendimiento de un módulo
+    según dos parámetros de ajuste, \(x\) e \(y\), medidos en unidades de escala. El
+    rendimiento se modela con la función siguiente, y los dos parámetros deben repartirse
+    un presupuesto fijo de 4 unidades. Se busca el <strong>máximo</strong> rendimiento.</p>
+    <dl>
+      <dt>Función</dt><dd>\( f(x,y)=80+12x+8y-2x^{2}-y^{2} \)</dd>
+      <dt>Punto de análisis</dt><dd>\( (1,\,1) \)</dd>
+      <dt>Restricción</dt><dd>\( x+y=4 \)</dd>
+    </dl>
+  </div>
+
+  <h2>Puede trabajar por partes</h2>
+  <p>Los dos módulos son independientes y puede abrirlos cuando quiera. <strong>Su trabajo se
+  guarda solo</strong> en el navegador de ese equipo: cierre la página y al volver encuentra todo
+  como lo dejó. Si va a continuar en otro computador, use <strong>Copiar mi código de avance</strong>
+  en el primero y <strong>Pegar un código de avance</strong> en el segundo. El avance se pierde si
+  borra los datos del navegador o si trabaja en una ventana de incógnito.</p>
+  <p>Lo único que debe existir antes que otra cosa es la función del primer módulo, porque el
+  segundo la toma de ahí.</p>
+
+  <h2>Antes de empezar: cómo se escriben las expresiones</h2>
+  <ul>
+    <li>La multiplicación <strong>siempre lleva asterisco</strong>: <code>12*x</code>, no <code>12x</code>.</li>
+    <li>Las potencias van con acento circunflejo: <code>x^2</code>.</li>
+    <li>Los decimales van con <strong>punto</strong>, no con coma: <code>0.8</code>.</li>
+    <li>Puede escribir valores exactos: <code>sqrt(180)</code>, <code>4/5</code>, <code>pi</code>.</li>
+    <li>También están disponibles <code>sin()</code>, <code>cos()</code>, <code>exp()</code>, <code>sqrt()</code> y <code>log()</code>.</li>
+  </ul>
+
+  <!-- MÓDULO 1 -->
+  <section class="modulo">
+    <header><span class="sigla">∇f</span><h3>Simulador de Gradiente</h3><span class="origen">Actividad 2 · ítem III</span></header>
+    <div class="interior">
+
+      <div class="sub">
+        <span class="item">Visualización</span>
+        <h4>La función y el punto de análisis</h4>
+        <p>El ítem III pide usar el simulador para visualizar la dirección de máximo crecimiento.
+        Escriba la función, el punto que le asigna la Tabla 4 y una ventana que los contenga.
+        Si va a seguir con la Actividad 4, deje también espacio para la restricción.</p>
+        <div class="tabla-envoltura">
+          <table class="teclado">
+            <thead><tr><th>Casilla</th><th>Escriba exactamente</th></tr></thead>
+            <tbody>
+              <tr><td class="campo">Función \(f(x,y)\)</td><td class="teclea">80+12*x+8*y-2*x^2-y^2</td></tr>
+              <tr><td class="campo">Punto \(x_0\)</td><td class="teclea">1</td></tr>
+              <tr><td class="campo">Punto \(y_0\)</td><td class="teclea">1</td></tr>
+              <tr><td class="campo">x mín</td><td class="teclea">-1</td></tr>
+              <tr><td class="campo">x máx</td><td class="teclea">6</td></tr>
+              <tr><td class="campo">y mín</td><td class="teclea">-1</td></tr>
+              <tr><td class="campo">y máx</td><td class="teclea">7</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:.9rem">Pulse <strong>Visualizar</strong>.</p>
+        <div class="responde">
+          <span class="etiqueta">El simulador responde</span>
+          Dibuja las curvas de nivel, el campo \( \nabla f \) en verde y la flecha roja en \(P_0\),
+          que marca la dirección de máximo crecimiento. Observe que esa flecha es perpendicular a la
+          curva de nivel que pasa por el punto.
+        </div>
+        <p class="captura"><strong>Capture aquí</strong> la gráfica: es la evidencia del ítem III.</p>
+      </div>
+
+      <div class="sub">
+        <span class="item opcional">Apoyo opcional</span>
+        <h4>Compruebe lo que calculó a mano</h4>
+        <p>Los ítems I y II se resuelven a mano y se escriben en el Apéndice 2. Si quiere verificar
+        que no se equivocó, péguelos aquí. <strong>Puede saltarse este apartado</strong>: no
+        condiciona nada y lo que escriba no reemplaza su procedimiento.</p>
+        <p>En este problema: \( f_x=12-4(1)=8 \), \( f_y=8-2(1)=6 \),
+        \( \|\nabla f\|=\sqrt{8^{2}+6^{2}}=10 \) y el unitario es \( (0{,}8;\;0{,}6) \).</p>
+        <div class="tabla-envoltura">
+          <table class="teclado">
+            <thead><tr><th>Casilla</th><th>Escriba exactamente</th></tr></thead>
+            <tbody>
+              <tr><td class="campo">\( \partial f/\partial x \)</td><td class="teclea">12-4*x</td></tr>
+              <tr><td class="campo">\( \partial f/\partial y \)</td><td class="teclea">8-2*y</td></tr>
+              <tr><td class="campo">\( f_x(x_0,y_0) \)</td><td class="teclea">8</td></tr>
+              <tr><td class="campo">\( f_y(x_0,y_0) \)</td><td class="teclea">6</td></tr>
+              <tr><td class="campo">\( \|\nabla f\| \)</td><td class="teclea">10</td></tr>
+              <tr><td class="campo">\( u_x \)</td><td class="teclea">0.8</td></tr>
+              <tr><td class="campo">\( u_y \)</td><td class="teclea">0.6</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="aviso teal" style="margin-top:1rem">
+          <p>Puede dejar casillas en blanco: solo se comprueba lo que escriba. Y cuando un valor no
+          sea exacto, escriba el valor exacto —por ejemplo <code>sqrt(180)</code>— o redondee a dos
+          decimales. El simulador le exige la precisión que usted mismo declara: si escribe un solo
+          decimal, lo juzga con un decimal.</p>
+        </div>
+        <div class="responde">
+          <span class="etiqueta">El simulador responde</span>
+          Le dice qué coincide y qué no. Si algo falla, le recuerda la regla que debe revisar, pero
+          no le muestra el resultado correcto.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MÓDULO 2 -->
+  <section class="modulo">
+    <header><span class="sigla">λ</span><h3>Simulador de Lagrange</h3><span class="origen">Actividad 4 · ítems I, II y III</span></header>
+    <div class="interior">
+
+      <div class="sub">
+        <span class="item">Ítems I y II</span>
+        <h4>Ingrese la función objetivo y la restricción</h4>
+        <p>La función ya viene del módulo anterior. La restricción \(x+y=4\) se escribe separando
+        el lado izquierdo del derecho: \(g(x,y)=x+y\) y \(c=4\).</p>
+        <div class="tabla-envoltura">
+          <table class="teclado">
+            <thead><tr><th>Casilla</th><th>Escriba o elija</th></tr></thead>
+            <tbody>
+              <tr><td class="campo">\( g(x,y) \)</td><td class="teclea">x+y</td></tr>
+              <tr><td class="campo">c</td><td class="teclea">4</td></tr>
+              <tr><td class="campo">Tipo de problema</td><td class="teclea">Maximización</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:.9rem">Pulse <strong>Resolver con el simulador</strong>.</p>
+        <div class="responde">
+          <span class="etiqueta">El simulador responde</span>
+          Entrega la tabla de puntos óptimos que el ítem II le pide registrar. En este problema sale
+          uno solo:
+          <table>
+            <tr><th>x</th><th>y</th><th>f(x, y)</th><th>λ</th></tr>
+            <tr><td>2</td><td>2</td><td>108</td><td>4</td></tr>
+          </table>
+          Cuando la restricción es una circunferencia salen dos, y el simulador marca cuál es el
+          máximo y cuál el mínimo. Además dibuja la restricción en naranja y el óptimo con
+          \( \nabla f \) y \( \nabla g \) sobre la misma recta.
+        </div>
+        <p class="captura"><strong>Capture aquí</strong> la gráfica y copie la tabla al Apéndice 2:
+        es la evidencia de los ítems I y II.</p>
+      </div>
+
+      <div class="sub">
+        <span class="item">Ítem III</span>
+        <h4>Contraste con su solución analítica</h4>
+        <p>Ahora resuelva el sistema a mano, que es lo que el ítem III pide. De las dos primeras
+        ecuaciones, \(12-4x=8-2y\). Sustituyendo \(y=4-x\) queda \(12-4x=8-2(4-x)=2x\), es decir
+        \(12=6x\), así que \(x=2\) y \(y=2\). Reemplazando en la primera, \(\lambda=12-4(2)=4\).</p>
+        <div class="tabla-envoltura">
+          <table class="teclado">
+            <thead><tr><th>Casilla</th><th>Escriba exactamente</th></tr></thead>
+            <tbody>
+              <tr><td class="campo">\( x^{*} \)</td><td class="teclea">2</td></tr>
+              <tr><td class="campo">\( y^{*} \)</td><td class="teclea">2</td></tr>
+              <tr><td class="campo">\( \lambda \)</td><td class="teclea">4</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:.9rem">Pulse <strong>Contrastar</strong>.</p>
+        <div class="responde">
+          <span class="etiqueta">El simulador responde</span>
+          Comprueba tres cosas por separado y se lo dice una por una: si su punto está sobre la
+          restricción, si allí se cumple \( \nabla f=\lambda\,\nabla g \), y con cuál de los puntos
+          de la tabla coincide. Si da con un punto crítico válido que no es el máximo o el mínimo
+          que pide su problema, se lo advierte.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <h2>El ítem IV lo escribe usted</h2>
+  <p>La interpretación de \( \lambda \) y la decisión de ingeniería van en el Apéndice 2, no en el
+  simulador. Con \( \lambda=4 \), si el presupuesto pasara de 4 a 5 unidades el rendimiento óptimo
+  subiría unas 4 unidades: de 108 a cerca de 112.</p>
+  <div class="aviso teal">
+    <p><strong>Compruebe usted mismo esa lectura.</strong> Cambie <code>c</code> de <code>4</code> a
+    <code>5</code> y vuelva a resolver: verá que el óptimo real pasa a 111,33. La estimación de
+    \( \lambda \) daba 112, porque \( \lambda \) es una razón de cambio instantánea y acierta el
+    orden de magnitud, no el valor exacto. Ese matiz vale la pena mencionarlo en su interpretación.</p>
+  </div>
+
+  <h2>Al terminar</h2>
+  <p>Pulse <strong>Copiar los datos del simulador</strong>. Copia al portapapeles la función, el
+  punto, la tabla de óptimos con \(f\) y \( \lambda \), y el resultado del contraste, para que los
+  registre en el Apéndice 2 con <kbd>Ctrl</kbd> + <kbd>V</kbd>. Las gráficas no se copian:
+  insértelas con las dos capturas que tomó.</p>
+
+  <footer>
+    Curso Cálculo Multivariado (203057) · Escuela de Ciencias Básicas, Tecnología e Ingeniería ·
+    Universidad Nacional Abierta y a Distancia
+  </footer>
+</div>
+
+</body>
+</html>

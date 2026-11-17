@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Gradiente y Optimización</title>
+
+<script src="vendor/math.js"></script>
+<script src="vendor/plotly.min.js"></script>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    svg: { fontCache: 'global' }, options: { enableMenu: false }
+  };
+</script>
+<script src="vendor/mathjax/tex-svg.js"></script>
+
+<style>
+  :root {
+    --azul: #003366; --amarillo: #ffcc00; --acento: #00b3a4;
+    --naranja: #e8630a; --rojo: #d62728; --verde: #1b6b3a;
+    --fondo: #f4f6f9; --tarjeta: #ffffff; --texto: #1f2937;
+    --suave: #6b7280; --borde: #d9dee7; --error: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; background: var(--fondo); color: var(--texto); line-height: 1.55; }
+  header.barra {
+    background: linear-gradient(135deg, var(--azul) 0%, #0a5588 100%);
+    color: #fff; padding: 1.2rem 1.5rem 1rem; border-bottom: 5px solid var(--amarillo);
+  }
+  header.barra h1 { font-size: 1.4rem; font-weight: 700; }
+  header.barra p { font-size: .87rem; opacity: .92; margin-top: .15rem; }
+
+  main { max-width: 1340px; margin: 1.1rem auto; padding: 0 1rem 2rem; }
+  .grid { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap: 1.1rem; align-items: start; }
+  @media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
+  .columna-grafica { position: sticky; top: 1rem; }
+  @media (max-width: 1080px) { .columna-grafica { position: static; } }
+
+  .card {
+    background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px;
+    padding: 1rem 1.15rem; margin-bottom: .9rem; box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  }
+  .card h2 { font-size: 1rem; color: var(--azul); border-bottom: 2px solid var(--amarillo); padding-bottom: .35rem; margin-bottom: .75rem; }
+
+  .modulo { border: 1px solid var(--borde); border-radius: 12px; margin-bottom: .9rem; background: #fff; overflow: hidden; }
+  .modulo > .encabezado {
+    display: flex; align-items: center; gap: .65rem; padding: .85rem 1rem;
+    background: #fbfcfe; cursor: pointer; border-bottom: 1px solid transparent;
+  }
+  .modulo[aria-expanded="true"] > .encabezado { border-bottom-color: var(--borde); }
+  .modulo > .encabezado:hover { background: #f1f6fa; }
+  .marca {
+    flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    font-size: .78rem; font-weight: 700; background: var(--azul); color: #fff;
+  }
+  .encabezado .titulo { flex: 1; }
+  .encabezado .nombre { font-size: .97rem; font-weight: 700; color: var(--azul); display: block; }
+  .encabezado .origen { font-size: .74rem; color: var(--suave); font-weight: 600; }
+  .modulo > .contenido { padding: .9rem 1rem 1.05rem; display: none; }
+  .modulo[aria-expanded="true"] > .contenido { display: block; }
+
+  .bloque { border-top: 1px dashed var(--borde); padding-top: .95rem; margin-top: 1.05rem; }
+  .bloque:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .bloque h3 { font-size: .91rem; color: var(--azul); margin-bottom: .15rem; }
+  .bloque .item { font-size: .73rem; color: var(--acento); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .bloque .item.opcional { color: var(--suave); }
+  .consigna { font-size: .87rem; margin: .4rem 0 .2rem; }
+
+  label { display: block; font-size: .79rem; font-weight: 600; margin: .5rem 0 .16rem; color: #374151; }
+  input, select {
+    width: 100%; padding: .45rem .58rem; border: 1px solid var(--borde); border-radius: 8px;
+    font-size: .91rem; background: #fbfcfe; color: var(--texto);
+    font-family: "Consolas", "DejaVu Sans Mono", monospace;
+  }
+  select { font-family: inherit; }
+  input:focus, select:focus { outline: 2px solid var(--acento); border-color: var(--acento); }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .f3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .5rem; }
+  .f4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .45rem; }
+  .fr { display: grid; grid-template-columns: 1fr auto 92px; gap: .45rem; align-items: end; }
+  .igual { font-size: 1.05rem; font-weight: 700; padding-bottom: .4rem; color: var(--suave); }
+
+  .acciones { display: flex; gap: .45rem; margin-top: .8rem; flex-wrap: wrap; }
+  .btn { padding: .5rem .95rem; border: none; border-radius: 8px; background: var(--azul); color: #fff;
+         font-size: .88rem; font-weight: 700; cursor: pointer; transition: background .2s, transform .1s; }
+  .btn:hover { background: #0a5588; }
+  .btn:active { transform: scale(.98); }
+  .btn.suave { background: #fff; color: var(--azul); border: 1px solid var(--borde); }
+  .btn.suave:hover { background: #eef3f7; }
+  .btn.ancho { width: 100%; }
+
+  .aviso { border-radius: 8px; padding: .55rem .78rem; font-size: .85rem; margin-top: .7rem; display: none; }
+  .aviso.ok { display: block; background: #e9f7ef; border-left: 4px solid var(--verde); }
+  .aviso.mal { display: block; background: #fdecea; border-left: 4px solid var(--error); }
+  .aviso.tip { display: block; background: #fff8e1; border-left: 4px solid var(--amarillo); }
+  .aviso.dato { display: block; background: #eef3f7; border-left: 4px solid var(--azul); }
+
+  table.resultados { width: 100%; border-collapse: collapse; margin-top: .7rem; font-size: .87rem; }
+  table.resultados th, table.resultados td { padding: .4rem .5rem; text-align: center; border-bottom: 1px solid var(--borde); }
+  table.resultados th { background: #f4f6f9; color: var(--azul); font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; }
+  table.resultados td.etiqueta { font-weight: 700; color: var(--azul); }
+  table.resultados tbody tr:last-child td { border-bottom: none; }
+
+  .nota { font-size: .77rem; color: var(--suave); margin-top: .4rem; }
+  .plot-box { height: 440px; }
+  @media (max-width: 640px) { .plot-box { height: 330px; } }
+  .leyenda { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .75rem; color: var(--suave); margin-top: .4rem; }
+  .leyenda span::before { content:''; display:inline-block; width:13px; height:3px; margin-right:.3rem; vertical-align:middle; border-radius:2px; }
+  .leyenda .g::before { background:#009688; } .leyenda .r::before { background:var(--rojo); }
+  .leyenda .n::before { background:var(--naranja); } .leyenda .a::before { background:var(--azul); }
+
+  .guardado { font-size: .78rem; color: var(--suave); display: flex; align-items: center; gap: .4rem; margin-top: .5rem; }
+  .punto { width: 7px; height: 7px; border-radius: 50%; background: var(--verde); flex: 0 0 auto; }
+
+  footer { text-align: center; font-size: .78rem; color: var(--suave); padding: 1rem; border-top: 1px solid var(--borde); }
+  details { font-size: .85rem; margin-top: .45rem; }
+  summary { cursor: pointer; font-weight: 600; color: var(--azul); }
+  details ul { margin: .4rem 0 .3rem 1.2rem; }
+  details li { margin: .2rem 0; }
+  code { background: #eef1f5; padding: .05rem .25rem; border-radius: 4px; font-size: .88em; }
+  textarea { width: 100%; min-height: 70px; padding: .45rem .58rem; border: 1px solid var(--borde);
+             border-radius: 8px; font-size: .88rem; font-family: "Consolas", monospace; background: #fbfcfe; color: var(--texto); }
+
+  /* Ejemplo de apoyo: queda plegado y discreto, para quien lo necesite. */
+  .ayuda { margin-top: 1.1rem; border-top: 1px dashed var(--borde); padding-top: .75rem; }
+  .ayuda > summary { font-size: .82rem; font-weight: 600; color: var(--suave); list-style: none; }
+  .ayuda > summary::-webkit-details-marker { display: none; }
+  .ayuda > summary::before { content: '▸ '; color: var(--acento); }
+  .ayuda[open] > summary::before { content: '▾ '; }
+  .ayuda > summary:hover { color: var(--azul); }
+  .ayuda[open] > summary { color: var(--azul); margin-bottom: .55rem; }
+  .ayuda p { font-size: .85rem; margin: .45rem 0; }
+  .ayuda table { width: 100%; border-collapse: collapse; font-size: .85rem; margin: .55rem 0; }
+  .ayuda th, .ayuda td { text-align: left; padding: .3rem .5rem; border-bottom: 1px solid var(--borde); }
+  .ayuda th { font-size: .71rem; text-transform: uppercase; letter-spacing: .03em; color: var(--suave); font-weight: 600; }
+  .ayuda tbody tr:last-child td { border-bottom: none; }
+  .ayuda td.t { font-family: "Consolas", "DejaVu Sans Mono", monospace; font-weight: 600; color: var(--acento); white-space: nowrap; }
+  .ayuda .marco { background: #fbfcfe; border: 1px solid var(--borde); border-radius: 8px; padding: .6rem .8rem; margin: .55rem 0; }
+  .ayuda .marco p:first-child { margin-top: 0; }
+  .ayuda .marco p:last-child { margin-bottom: 0; }
+  .ayuda .salida { background: #eef3f7; border-left: 3px solid var(--azul); border-radius: 0 6px 6px 0; padding: .55rem .75rem; margin: .55rem 0; }
+  .ayuda .salida table { margin: .35rem 0 0; }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <h1>Simulador de Gradiente y Optimización</h1>
+  <p>Fase 2 · Cálculo Multivariado (203057) · Universidad Nacional Abierta y a Distancia</p>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- ===================== COLUMNA DE TRABAJO ===================== -->
+    <div>
+      <div class="card" style="padding:.8rem 1.05rem">
+        <p style="font-size:.86rem">
+          Este simulador cubre los dos puntos del <strong>Apéndice 1</strong> que lo requieren: el
+          ítem III de la Actividad 2 y los ítems I, II y III de la Actividad 4. La superficie de la
+          Actividad 1 se construye en GeoGebra 3D, y el planteamiento de la Actividad 3 es trabajo
+          analítico suyo.
+        </p>
+        <div class="guardado"><span class="punto"></span><span id="estadoGuardado">Su trabajo se guarda automáticamente en este equipo.</span></div>
+      </div>
+
+      <!-- ============ MÓDULO 1 ============ -->
+      <section class="modulo" id="mod1" aria-expanded="true">
+        <div class="encabezado"><span class="marca">∇f</span>
+          <span class="titulo"><span class="nombre">Simulador de Gradiente</span>
+          <span class="origen">Actividad 2 · ítem III</span></span></div>
+        <div class="contenido">
+          <div class="bloque">
+            <span class="item">Visualización</span>
+            <h3>La función y el punto de análisis</h3>
+            <p class="consigna">Escriba la función de su problema, tomada de la Tabla 2 del Apéndice 1,
+            y el punto que le asigna la Tabla 4. El simulador dibuja las curvas de nivel, el campo
+            \( \nabla f \) y la dirección de máximo crecimiento en ese punto.</p>
+            <label for="funcion">Función \( f(x,y) \)</label>
+            <input id="funcion" type="text" placeholder="por ejemplo: 80+12*x+8*y-2*x^2-y^2" spellcheck="false">
+            <div class="f2">
+              <div><label for="px">Punto \( x_0 \)</label><input id="px" type="number" step="any" placeholder="de la Tabla 4"></div>
+              <div><label for="py">Punto \( y_0 \)</label><input id="py" type="number" step="any" placeholder="de la Tabla 4"></div>
+            </div>
+            <label>Ventana de observación</label>
+            <div class="f4">
+              <div><label for="xmin" style="margin-top:0">x mín</label><input id="xmin" type="number" value="-1" step="any"></div>
+              <div><label for="xmax" style="margin-top:0">x máx</label><input id="xmax" type="number" value="6" step="any"></div>
+              <div><label for="ymin" style="margin-top:0">y mín</label><input id="ymin" type="number" value="-1" step="any"></div>
+              <div><label for="ymax" style="margin-top:0">y máx</label><input id="ymax" type="number" value="7" step="any"></div>
+            </div>
+            <div class="acciones">
+              <button class="btn" id="b1">Visualizar</button>
+              <button class="btn suave" id="p1">Ver pista</button>
+            </div>
+            <div class="aviso" id="a1"></div>
+          </div>
+
+          <div class="bloque">
+            <span class="item opcional">Apoyo opcional</span>
+            <h3>Compruebe lo que calculó a mano</h3>
+            <p class="consigna">Los ítems I y II de la Actividad 2 se resuelven a mano y se escriben en el
+            Apéndice 2. Si quiere, péguelos aquí y el simulador le dice si coinciden. Puede saltarse este
+            apartado: no condiciona nada.</p>
+            <div class="f2">
+              <div><label for="dfx">\( \partial f/\partial x \)</label><input id="dfx" type="text" spellcheck="false"></div>
+              <div><label for="dfy">\( \partial f/\partial y \)</label><input id="dfy" type="text" spellcheck="false"></div>
+            </div>
+            <div class="f2">
+              <div><label for="gx">\( f_x(x_0,y_0) \)</label><input id="gx" type="text" spellcheck="false"></div>
+              <div><label for="gy">\( f_y(x_0,y_0) \)</label><input id="gy" type="text" spellcheck="false"></div>
+            </div>
+            <div class="f3">
+              <div><label for="mag">\( \|\nabla f\| \)</label><input id="mag" type="text" spellcheck="false"></div>
+              <div><label for="ux">\( u_x \)</label><input id="ux" type="text" spellcheck="false"></div>
+              <div><label for="uy">\( u_y \)</label><input id="uy" type="text" spellcheck="false"></div>
+            </div>
+            <p class="nota">Acepta valores exactos como <code>sqrt(180)</code> o decimales redondeados.
+            Deje en blanco lo que no quiera comprobar.</p>
+            <div class="acciones">
+              <button class="btn suave" id="b2">Comprobar mis cálculos</button>
+            </div>
+            <div class="aviso" id="a2"></div>
+          </div>
+
+          <details class="ayuda">
+            <summary>¿No sabe qué escribir? Vea un ejemplo resuelto</summary>
+            <p>Este <strong>no</strong> es ninguno de los cinco problemas del Apéndice 1: es un problema
+            de práctica, para que vea el manejo. Suponga que le hubiera tocado
+            \( f(x,y)=80+12x+8y-2x^{2}-y^{2} \) con punto de análisis \( (1,1) \).</p>
+            <div class="marco">
+              <p><strong>En la visualización escribiría:</strong></p>
+              <table>
+                <thead><tr><th>Casilla</th><th>Qué escribir</th></tr></thead>
+                <tbody>
+                  <tr><td>Función \(f(x,y)\)</td><td class="t">80+12*x+8*y-2*x^2-y^2</td></tr>
+                  <tr><td>Punto \(x_0\) y \(y_0\)</td><td class="t">1 &nbsp;y&nbsp; 1</td></tr>
+                  <tr><td>Ventana</td><td class="t">-1 &nbsp;6 &nbsp;-1 &nbsp;7</td></tr>
+                </tbody>
+              </table>
+              <p>Al pulsar <strong>Visualizar</strong> aparecen las curvas de nivel, el campo verde y la
+              flecha roja en \(P_0\). Esa gráfica es la evidencia del ítem III.</p>
+            </div>
+            <div class="marco">
+              <p><strong>Y en la comprobación opcional:</strong> derivando a mano,
+              \( f_x=12-4x \) y \( f_y=8-2y \). En \( (1,1) \) eso da \( f_x=8 \) y \( f_y=6 \),
+              de donde \( \|\nabla f\|=\sqrt{8^{2}+6^{2}}=10 \) y el unitario es
+              \( \left(\tfrac{8}{10},\tfrac{6}{10}\right) \).</p>
+              <table>
+                <thead><tr><th>Casilla</th><th>Qué escribir</th></tr></thead>
+                <tbody>
+                  <tr><td>\( \partial f/\partial x \) y \( \partial f/\partial y \)</td><td class="t">12-4*x &nbsp;y&nbsp; 8-2*y</td></tr>
+                  <tr><td>\( f_x \) y \( f_y \) en el punto</td><td class="t">8 &nbsp;y&nbsp; 6</td></tr>
+                  <tr><td>\( \|\nabla f\| \)</td><td class="t">10</td></tr>
+                  <tr><td>\( u_x \) y \( u_y \)</td><td class="t">0.8 &nbsp;y&nbsp; 0.6</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Recuerde: la multiplicación lleva asterisco (<code>12*x</code>, no <code>12x</code>), las
+            potencias van con <code>^</code> y los decimales con punto. Puede escribir valores exactos
+            como <code>sqrt(180)</code>.</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- ============ MÓDULO 2 ============ -->
+      <section class="modulo" id="mod2" aria-expanded="false">
+        <div class="encabezado"><span class="marca">λ</span>
+          <span class="titulo"><span class="nombre">Simulador de Lagrange</span>
+          <span class="origen">Actividad 4 · ítems I, II y III</span></span></div>
+        <div class="contenido">
+          <div class="bloque">
+            <span class="item">Ítems I y II</span>
+            <h3>Ingrese la función objetivo y la restricción</h3>
+            <p class="consigna">Escriba la restricción de la Tabla 6 en la forma \( g(x,y)=c \). El simulador
+            resuelve el sistema y le entrega el punto o los puntos óptimos, el valor de la función en cada
+            uno y el multiplicador \( \lambda \), que es lo que el ítem II le pide registrar.</p>
+            <p class="nota" id="recordatorioF">La función objetivo es la que escribió en el módulo anterior.</p>
+            <div class="fr">
+              <div><label for="restr">\( g(x,y) \)</label><input id="restr" type="text" placeholder="por ejemplo: x+y" spellcheck="false"></div>
+              <div class="igual">=</div>
+              <div><label for="restrC">c</label><input id="restrC" type="number" step="any"></div>
+            </div>
+            <label for="sentido">Su problema es de</label>
+            <select id="sentido">
+              <option value="">— elija —</option>
+              <option value="max">Maximización</option>
+              <option value="min">Minimización</option>
+            </select>
+            <div class="acciones">
+              <button class="btn" id="b3">Resolver con el simulador</button>
+              <button class="btn suave" id="p3">Ver pista</button>
+            </div>
+            <div class="aviso" id="a3"></div>
+            <div id="tablaLagrange"></div>
+          </div>
+
+          <div class="bloque">
+            <span class="item">Ítem III</span>
+            <h3>Contraste con su solución analítica</h3>
+            <p class="consigna">Resuelva el sistema a mano y escriba aquí su resultado. El simulador comprueba
+            que cumpla las condiciones de Lagrange y lo contrasta con el valor que acaba de obtener.</p>
+            <div class="f3">
+              <div><label for="ox">\( x^{*} \)</label><input id="ox" type="text" spellcheck="false"></div>
+              <div><label for="oy">\( y^{*} \)</label><input id="oy" type="text" spellcheck="false"></div>
+              <div><label for="ol">\( \lambda \)</label><input id="ol" type="text" spellcheck="false"></div>
+            </div>
+            <div class="acciones">
+              <button class="btn" id="b4">Contrastar</button>
+              <button class="btn suave" id="p4">Ver pista</button>
+            </div>
+            <div class="aviso" id="a4"></div>
+          </div>
+
+          <details class="ayuda">
+            <summary>¿No sabe qué escribir? Vea un ejemplo resuelto</summary>
+            <p>Siguiendo con el problema de práctica —que <strong>no</strong> es ninguno de los cinco
+            del Apéndice 1—, \( f(x,y)=80+12x+8y-2x^{2}-y^{2} \) con la restricción \( x+y=4 \) y un
+            problema de maximización.</p>
+            <div class="marco">
+              <p><strong>Ítems I y II.</strong> La restricción se escribe separando el lado izquierdo
+              del derecho: \( g(x,y)=x+y \) y \( c=4 \).</p>
+              <table>
+                <thead><tr><th>Casilla</th><th>Qué escribir</th></tr></thead>
+                <tbody>
+                  <tr><td>\( g(x,y) \)</td><td class="t">x+y</td></tr>
+                  <tr><td>c</td><td class="t">4</td></tr>
+                  <tr><td>Tipo de problema</td><td class="t">Maximización</td></tr>
+                </tbody>
+              </table>
+              <div class="salida">
+                <p style="margin:0"><strong>El simulador devuelve</strong> la tabla que el ítem II le
+                pide registrar. Aquí sale un solo punto:</p>
+                <table>
+                  <thead><tr><th>x</th><th>y</th><th>f(x, y)</th><th>λ</th></tr></thead>
+                  <tbody><tr><td>2</td><td>2</td><td>108</td><td>4</td></tr></tbody>
+                </table>
+              </div>
+              <p>Cuando la restricción es una circunferencia salen dos puntos y el simulador marca
+              cuál es el máximo y cuál el mínimo.</p>
+            </div>
+            <div class="marco">
+              <p><strong>Ítem III.</strong> Ahora el despeje a mano. De las dos primeras ecuaciones,
+              \( 12-4x=8-2y \). Con \( y=4-x \) queda \( 12-4x=8-2(4-x)=2x \), o sea \( 12=6x \),
+              así que \( x=2 \) e \( y=2 \). Reemplazando en la primera, \( \lambda=12-4(2)=4 \).</p>
+              <table>
+                <thead><tr><th>Casilla</th><th>Qué escribir</th></tr></thead>
+                <tbody>
+                  <tr><td>\( x^{*} \) y \( y^{*} \)</td><td class="t">2 &nbsp;y&nbsp; 2</td></tr>
+                  <tr><td>\( \lambda \)</td><td class="t">4</td></tr>
+                </tbody>
+              </table>
+              <p>Al pulsar <strong>Contrastar</strong>, el simulador confirma que el punto está sobre
+              la restricción, que allí se cumple \( \nabla f=\lambda\,\nabla g \) y que coincide con
+              el que él mismo obtuvo.</p>
+            </div>
+            <p>El ítem IV no se resuelve aquí: la interpretación de \( \lambda \) y la decisión se
+            escriben en el Apéndice 2. En este ejemplo, con \( \lambda=4 \), pasar el presupuesto de
+            4 a 5 unidades subiría el óptimo de 108 a cerca de 112.</p>
+          </details>
+        </div>
+      </section>
+
+      <div class="card">
+        <h2>Para su entrega</h2>
+        <p style="font-size:.87rem">Capture la gráfica con la herramienta de recorte de su equipo: es la
+        evidencia del ítem III de la Actividad 2 y de los ítems I y II de la Actividad 4. El botón copia los
+        datos que entregó el simulador, para registrarlos en el Apéndice 2.</p>
+        <button class="btn ancho" id="btnCopiar" style="margin-top:.6rem">Copiar los datos del simulador</button>
+        <p class="nota" id="avisoCopia"></p>
+      </div>
+
+      <div class="card">
+        <h2>Su avance</h2>
+        <p style="font-size:.87rem">El trabajo se guarda solo, en este navegador y en este equipo. Si va a
+        continuar en otro computador, copie su código de avance y péguelo allá.</p>
+        <div class="acciones">
+          <button class="btn suave" id="btnExportar">Copiar mi código de avance</button>
+          <button class="btn suave" id="btnImportar">Pegar un código de avance</button>
+          <button class="btn suave" id="btnBorrar">Empezar de nuevo</button>
+        </div>
+        <div id="cajaImportar" style="display:none">
+          <label for="codigo">Pegue aquí el código y pulse Cargar</label>
+          <textarea id="codigo" placeholder="Pegue el código que copió en el otro equipo" spellcheck="false"></textarea>
+          <div class="acciones"><button class="btn" id="btnCargar">Cargar</button></div>
+        </div>
+        <div class="aviso" id="aAvance"></div>
+      </div>
+    </div>
+
+    <!-- ===================== COLUMNA DE LA GRÁFICA ===================== -->
+    <div class="columna-grafica">
+      <div class="card">
+        <h2>Curvas de nivel y campo gradiente</h2>
+        <div id="grafica2d" class="plot-box"></div>
+        <div class="leyenda" id="leyenda2d"></div>
+        <p class="nota" id="nota2d">Escriba su función y el punto de análisis, y pulse Visualizar.</p>
+      </div>
+      <div class="card">
+        <h2>¿Qué estoy viendo?</h2>
+        <details>
+          <summary>Interpretación geométrica del gradiente</summary>
+          <ul>
+            <li>El gradiente \( \nabla f=\left(\dfrac{\partial f}{\partial x},\dfrac{\partial f}{\partial y}\right) \) apunta en la dirección de <strong>máximo crecimiento</strong>.</li>
+            <li>Su magnitud \( \|\nabla f\| \) es la <strong>máxima tasa de cambio</strong>.</li>
+            <li>\( \nabla f \) es <strong>perpendicular</strong> a la curva de nivel que pasa por el punto.</li>
+            <li>Donde las curvas de nivel se juntan, el fenómeno cambia más rápido.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>Por qué funcionan los multiplicadores de Lagrange</summary>
+          <ul>
+            <li>Sobre la curva \(g=c\) solo cuentan los movimientos que no se salen de ella.</li>
+            <li>En el óptimo la curva de nivel de \(f\) y la restricción son <strong>tangentes</strong>, así que sus gradientes quedan sobre la misma recta: \( \nabla f=\lambda\,\nabla g \).</li>
+            <li>Si \( \lambda&lt;0 \) los dos gradientes apuntan en sentidos <strong>opuestos</strong>; si \( \lambda&gt;0 \), en el mismo sentido.</li>
+            <li>\( \lambda \) mide cuánto cambia el valor óptimo al relajar la restricción una unidad.</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Simulador educativo · Curso Cálculo Multivariado (203057) · UNAD · Elaborado con Math.js, Plotly y MathJax
+</footer>
+
+<script>
+/* ======================= UTILIDADES ======================= */
+const $ = (id) => document.getElementById(id);
+const CLAVE = 'simulador-gradiente-fase2';
+
+const T = {
+  f: null, fStr: '', dfdx: null, dfdy: null,
+  xmin: -1, xmax: 6, ymin: -1, ymax: 7, vista: null,
+  px: null, py: null, gx: null, gy: null,
+  g: null, gStr: '', dgdx: null, dgdy: null, cVal: null, sentido: '',
+  soluciones: [], elegida: null, curva: null,
+  listo1: false, listo2: false, contraste: null
+};
+
+let colaMathJax = Promise.resolve();
+function componer(nodos) {
+  if (!window.MathJax || !MathJax.typesetPromise) return;
+  colaMathJax = colaMathJax.then(() => MathJax.typesetPromise(nodos)).catch(() => {});
+}
+function avisar(id, clase, html) { const c = $(id); c.className = 'aviso ' + clase; c.innerHTML = html; componer([c]); }
+function limpiarAviso(id) { const c = $(id); c.className = 'aviso'; c.innerHTML = ''; }
+function fmt(v) {
+  if (v === null || v === undefined || !isFinite(v)) return '—';
+  const n = Math.abs(v) < 1e-10 ? 0 : v;
+  return parseFloat(n.toPrecision(6)).toString();
+}
+function texDe(s) { try { return math.parse(s).toTex(); } catch (e) { return '\\text{?}'; } }
+
+function numero(texto, nombre) {
+  const s = (texto || '').trim().replace(',', '.');
+  if (!s) throw new Error('Falta ' + nombre + '.');
+  let v;
+  try { v = math.evaluate(s); } catch (e) { throw new Error('No se pudo leer ' + nombre + ': revise la escritura.'); }
+  if (typeof v !== 'number' || !isFinite(v)) throw new Error(nombre + ' debe ser un número.');
+  return v;
+}
+function decimales(texto) {
+  const s = (texto || '').trim().replace(',', '.');
+  const m = /^[-+]?\d*\.(\d+)$/.exec(s);
+  if (m) return m[1].length;
+  if (/^[-+]?\d+\.?$/.test(s)) return 0;
+  return null;
+}
+function coincide(texto, correcto) {
+  let a; try { a = numero(texto, 'el valor'); } catch (e) { return false; }
+  const d = decimales(texto), dif = Math.abs(a - correcto);
+  if (d === null) return dif <= Math.max(1e-6, Math.abs(correcto) * 1e-6);
+  return dif <= 0.5 * Math.pow(10, -d) && dif <= Math.max(0.006, Math.abs(correcto) * 0.01);
+}
+function compilar(expr, nombre) {
+  if (!expr || !String(expr).trim()) throw new Error('Falta ' + nombre + '.');
+  let nodo;
+  try { nodo = math.parse(expr); }
+  catch (e) { throw new Error('No se pudo leer ' + nombre + ': use * para multiplicar y ^ para potencias.'); }
+  const code = nodo.compile();
+  return { nodo, evaluar: (x, y) => {
+    const v = code.evaluate({ x, y });
+    if (typeof v !== 'number' || !isFinite(v)) throw new Error(nombre + ' no toma un valor real en algún punto de la ventana.');
+    return v;
+  } };
+}
+function comparaExpresiones(alumno, correcta) {
+  let peor = null, dif = 0, validos = 0;
+  for (let k = 0; k < 60; k++) {
+    const x = T.xmin + (T.xmax - T.xmin) * Math.random();
+    const y = T.ymin + (T.ymax - T.ymin) * Math.random();
+    let a, b;
+    try { a = alumno(x, y); b = correcta.evaluate({ x, y }); } catch (_) { continue; }
+    if (!isFinite(a) || !isFinite(b)) continue;
+    validos++;
+    const d = Math.abs(a - b) / Math.max(1, Math.abs(b));
+    if (d > dif) { dif = d; peor = { x, y }; }
+  }
+  if (validos < 10) return { x: (T.xmin + T.xmax) / 2, y: (T.ymin + T.ymax) / 2 };
+  return dif > 1e-6 ? peor : null;
+}
+function exigeFuncion() {
+  if (!T.listo1) throw new Error('Escriba primero la función y el punto en el Simulador de Gradiente, y pulse Visualizar.');
+}
+
+/* ======================= NEWTON ======================= */
+function resolverLineal(A, b) {
+  const n = b.length, M = A.map((f, i) => f.concat([b[i]]));
+  for (let k = 0; k < n; k++) {
+    let p = k;
+    for (let i = k + 1; i < n; i++) if (Math.abs(M[i][k]) > Math.abs(M[p][k])) p = i;
+    if (Math.abs(M[p][k]) < 1e-14) return null;
+    [M[k], M[p]] = [M[p], M[k]];
+    for (let i = k + 1; i < n; i++) {
+      const r = M[i][k] / M[k][k];
+      for (let j = k; j <= n; j++) M[i][j] -= r * M[k][j];
+    }
+  }
+  const z = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = M[i][n];
+    for (let j = i + 1; j < n; j++) s -= M[i][j] * z[j];
+    z[i] = s / M[i][i];
+  }
+  return z;
+}
+function newton(sistema, inicio) {
+  let v = inicio.slice();
+  const n = v.length, d = 1e-6;
+  for (let k = 0; k < 60; k++) {
+    let F; try { F = sistema(v); } catch (_) { return null; }
+    if (F.some(t => !isFinite(t))) return null;
+    if (Math.max.apply(null, F.map(Math.abs)) < 1e-11) return v;
+    const J = []; for (let i = 0; i < n; i++) J.push(new Array(n).fill(0));
+    for (let c = 0; c < n; c++) {
+      const w = v.slice(); w[c] += d;
+      let Fw; try { Fw = sistema(w); } catch (_) { return null; }
+      for (let i = 0; i < n; i++) J[i][c] = (Fw[i] - F[i]) / d;
+    }
+    const paso = resolverLineal(J, F.map(t => -t));
+    if (!paso) return null;
+    const esc = Math.min(1, 5 / Math.max(1e-9, Math.hypot.apply(null, paso)));
+    for (let i = 0; i < n; i++) v[i] += paso[i] * esc;
+    if (v.some(t => !isFinite(t))) return null;
+  }
+  return null;
+}
+function puntosLagrange() {
+  const fx = (x, y) => T.dfdx.evaluate({ x, y }), fy = (x, y) => T.dfdy.evaluate({ x, y });
+  const gx = (x, y) => T.dgdx.evaluate({ x, y }), gy = (x, y) => T.dgdy.evaluate({ x, y });
+  const sis = v => [fx(v[0], v[1]) - v[2] * gx(v[0], v[1]),
+                    fy(v[0], v[1]) - v[2] * gy(v[0], v[1]),
+                    T.g(v[0], v[1]) - T.cVal];
+  const res = [], M = 9;
+  for (let i = 0; i <= M; i++) for (let j = 0; j <= M; j++) {
+    const x0 = T.xmin + (T.xmax - T.xmin) * i / M, y0 = T.ymin + (T.ymax - T.ymin) * j / M;
+    let l0 = 0;
+    try { const a = gx(x0, y0), b = gy(x0, y0), n2 = a * a + b * b;
+          if (n2 > 1e-12) l0 = (fx(x0, y0) * a + fy(x0, y0) * b) / n2; } catch (_) { continue; }
+    const s = newton(sis, [x0, y0, l0]);
+    if (!s || res.some(r => Math.hypot(r.x - s[0], r.y - s[1]) < 1e-4)) continue;
+    let valor; try { valor = T.f(s[0], s[1]); } catch (_) { continue; }
+    res.push({ x: s[0], y: s[1], lam: s[2], f: valor });
+  }
+  res.sort((a, b) => b.f - a.f);
+  return res;
+}
+
+/* ======================= CURVA g = c ======================= */
+function curvaDeNivel(g, c, x0, x1, y0, y1, N) {
+  const X = [], Y = [], V = [];
+  for (let i = 0; i <= N; i++) X.push(x0 + (x1 - x0) * i / N);
+  for (let j = 0; j <= N; j++) Y.push(y0 + (y1 - y0) * j / N);
+  for (let j = 0; j <= N; j++) {
+    const fila = [];
+    for (let i = 0; i <= N; i++) { let v; try { v = g(X[i], Y[j]) - c; } catch (_) { v = NaN; } fila.push(v); }
+    V.push(fila);
+  }
+  const xs = [], ys = [], ip = (p, q, vp, vq) => p + (q - p) * (-vp) / (vq - vp);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const v = [V[j][i], V[j][i + 1], V[j + 1][i + 1], V[j + 1][i]];
+    if (v.some(t => !isFinite(t))) continue;
+    const P = [[X[i], Y[j]], [X[i + 1], Y[j]], [X[i + 1], Y[j + 1]], [X[i], Y[j + 1]]];
+    const cortes = [];
+    for (let k = 0; k < 4; k++) {
+      const a = v[k], b = v[(k + 1) % 4];
+      if ((a < 0 && b >= 0) || (a >= 0 && b < 0)) {
+        const A = P[k], B = P[(k + 1) % 4];
+        cortes.push([ip(A[0], B[0], a, b), ip(A[1], B[1], a, b)]);
+      }
+    }
+    if (cortes.length === 2) { xs.push(cortes[0][0], cortes[1][0], null); ys.push(cortes[0][1], cortes[1][1], null); }
+  }
+  return { x: xs, y: ys };
+}
+function ventanaProporcionada() {
+  const caja = $('grafica2d');
+  const ancho = Math.max(80, (caja.clientWidth || 520) - 70);
+  const alto = Math.max(80, (caja.clientHeight || 440) - 70);
+  let x0 = T.xmin, x1 = T.xmax, y0 = T.ymin, y1 = T.ymax;
+  const pl = ancho / alto, pd = (x1 - x0) / (y1 - y0);
+  if (pd < pl) { const n = (y1 - y0) * pl, c = (x0 + x1) / 2; x0 = c - n / 2; x1 = c + n / 2; }
+  else { const n = (x1 - x0) / pl, c = (y0 + y1) / 2; y0 = c - n / 2; y1 = c + n / 2; }
+  return { x0, x1, y0, y1 };
+}
+
+/* ======================= DIBUJO ======================= */
+function dibujar() {
+  if (!T.listo1) return;
+  T.vista = ventanaProporcionada();
+  const v = T.vista;
+  T.curva = (T.listo2 && T.g) ? curvaDeNivel(T.g, T.cVal, v.x0, v.x1, v.y0, v.y1, 190) : null;
+  render2D();
+
+  const partes = ['<span class="a">curvas de nivel</span>', '<span class="g">campo \\( \\nabla f \\)</span>',
+                  '<span class="r">\\( \\nabla f \\) en \\(P_0\\)</span>'];
+  if (T.listo2) partes.push('<span class="n">restricción \\( g=c \\)</span>');
+  $('leyenda2d').innerHTML = partes.join('');
+  componer([$('leyenda2d')]);
+  $('nota2d').textContent = T.listo2
+    ? 'En el óptimo, ∇f y ∇g quedan sobre la misma recta: esa es la condición de Lagrange.'
+    : 'La flecha roja es perpendicular a la curva de nivel que pasa por el punto: esa es la dirección de máximo crecimiento.';
+}
+
+function render2D() {
+  const v = T.vista, N = 85, xs = [], ys = [], Z = [];
+  for (let j = 0; j < N; j++) {
+    const y = v.y0 + (v.y1 - v.y0) * j / (N - 1); const fila = [];
+    for (let i = 0; i < N; i++) { let t; try { t = T.f(v.x0 + (v.x1 - v.x0) * i / (N - 1), y); } catch (_) { t = null; } fila.push(t); }
+    Z.push(fila); ys.push(y);
+  }
+  for (let i = 0; i < N; i++) xs.push(v.x0 + (v.x1 - v.x0) * i / (N - 1));
+
+  const trazas = [{ type: 'contour', x: xs, y: ys, z: Z, colorscale: 'Viridis',
+    contours: { coloring: 'lines', showlabels: true }, line: { width: 1.4 }, showscale: false, hoverinfo: 'z' }];
+  const anot = [];
+
+  const h = 1e-5, nQ = 11, esc = Math.min(v.x1 - v.x0, v.y1 - v.y0) * 0.055;
+  const m0 = Math.hypot(T.gx, T.gy) || 1;
+  for (let j = 0; j < nQ; j++) for (let i = 0; i < nQ; i++) {
+    const x = v.x0 + (v.x1 - v.x0) * (i + 0.5) / nQ, y = v.y0 + (v.y1 - v.y0) * (j + 0.5) / nQ;
+    let a, b;
+    try { a = (T.f(x + h, y) - T.f(x - h, y)) / (2 * h); b = (T.f(x, y + h) - T.f(x, y - h)) / (2 * h); } catch (_) { continue; }
+    const m = Math.hypot(a, b);
+    if (!isFinite(m) || m < 1e-9) continue;
+    const L = esc * Math.min(2.2, Math.max(0.25, m / m0));
+    anot.push({ x, y, xref: 'x', yref: 'y', ax: x - a / m * L, ay: y - b / m * L, axref: 'x', ayref: 'y',
+      showarrow: true, arrowhead: 3, arrowsize: 1, arrowwidth: 1.4, arrowcolor: 'rgba(0,150,136,.75)', opacity: .85, text: '' });
+  }
+
+  if (T.listo2 && T.curva && T.curva.x.length) {
+    trazas.push({ type: 'scatter', mode: 'lines', x: T.curva.x, y: T.curva.y,
+      line: { color: '#e8630a', width: 3.2 }, connectgaps: false, hoverinfo: 'skip', showlegend: false });
+  }
+
+  trazas.push({ type: 'scatter', mode: 'markers+text', x: [T.px], y: [T.py],
+    marker: { size: 10, color: '#d62728', line: { color: '#fff', width: 1.5 } },
+    text: ['P₀'], textposition: 'bottom center', textfont: { size: 13, color: '#d62728' },
+    hoverinfo: 'x+y', showlegend: false });
+  const m = Math.hypot(T.gx, T.gy);
+  if (m > 1e-12) {
+    const L = Math.min(v.x1 - v.x0, v.y1 - v.y0) * 0.24;
+    anot.push({ x: T.px + T.gx / m * L, y: T.py + T.gy / m * L, ax: T.px, ay: T.py,
+      xref: 'x', yref: 'y', axref: 'x', ayref: 'y', showarrow: true, arrowhead: 3,
+      arrowsize: 1.6, arrowwidth: 3.2, arrowcolor: '#d62728', text: '∇f(P₀)', font: { size: 12, color: '#d62728' } });
+  }
+
+  if (T.listo2 && T.elegida) {
+    const o = T.elegida;
+    trazas.push({ type: 'scatter', mode: 'markers+text', x: [o.x], y: [o.y],
+      marker: { size: 13, color: '#ffcc00', symbol: 'star', line: { color: '#003366', width: 1.5 } },
+      text: ['óptimo'], textposition: 'bottom center', textfont: { size: 12, color: '#003366' },
+      hoverinfo: 'x+y', showlegend: false });
+    const L = Math.min(v.x1 - v.x0, v.y1 - v.y0) * 0.22;
+    const fx = T.dfdx.evaluate({ x: o.x, y: o.y }), fy = T.dfdy.evaluate({ x: o.x, y: o.y });
+    const gx = T.dgdx.evaluate({ x: o.x, y: o.y }), gy = T.dgdy.evaluate({ x: o.x, y: o.y });
+    const mf = Math.hypot(fx, fy), mg = Math.hypot(gx, gy);
+    if (mf > 1e-12) anot.push({ x: o.x + fx / mf * L, y: o.y + fy / mf * L, ax: o.x, ay: o.y,
+      xref: 'x', yref: 'y', axref: 'x', ayref: 'y', showarrow: true, arrowhead: 3, arrowsize: 1.5,
+      arrowwidth: 2.6, arrowcolor: '#d62728', text: '∇f', font: { size: 12, color: '#d62728' }, xshift: 14, yshift: 10 });
+    if (mg > 1e-12) anot.push({ x: o.x + gx / mg * L * .72, y: o.y + gy / mg * L * .72, ax: o.x, ay: o.y,
+      xref: 'x', yref: 'y', axref: 'x', ayref: 'y', showarrow: true, arrowhead: 3, arrowsize: 1.5,
+      arrowwidth: 2.6, arrowcolor: '#003366', text: '∇g', font: { size: 12, color: '#003366' }, xshift: -16, yshift: -12 });
+  }
+
+  Plotly.react('grafica2d', trazas, {
+    margin: { t: 20, r: 12, b: 42, l: 50 },
+    xaxis: { title: 'x', range: [v.x0, v.x1], zeroline: false },
+    yaxis: { title: 'y', range: [v.y0, v.y1], zeroline: false },
+    annotations: anot, plot_bgcolor: '#fbfcfe', paper_bgcolor: '#fff', showlegend: false
+  }, { responsive: true, displaylogo: false });
+}
+
+/* ======================= GUARDADO ======================= */
+const CAMPOS = ['funcion','px','py','xmin','xmax','ymin','ymax','dfx','dfy','gx','gy','mag','ux','uy',
+                'restr','restrC','sentido','ox','oy','ol'];
+let reloj = null;
+function guardar() {
+  const datos = {};
+  CAMPOS.forEach(id => { const el = $(id); if (el) datos[id] = el.value; });
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify({ v: 2, campos: datos, fecha: Date.now() }));
+    $('estadoGuardado').textContent = 'Trabajo guardado en este equipo · ' +
+      new Date().toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (_) {
+    $('estadoGuardado').textContent = 'Este navegador no permite guardar: copie su código de avance antes de cerrar.';
+  }
+}
+function programarGuardado() { clearTimeout(reloj); reloj = setTimeout(guardar, 600); }
+function cargar() {
+  let datos = null;
+  try { const s = localStorage.getItem(CLAVE); if (s) datos = JSON.parse(s); } catch (_) { return false; }
+  if (!datos || !datos.campos) return false;
+  CAMPOS.forEach(id => { const el = $(id); if (el && typeof datos.campos[id] === 'string') el.value = datos.campos[id]; });
+  return true;
+}
+function recomponer() {
+  T.listo1 = false; T.listo2 = false; T.elegida = null; T.soluciones = []; T.contraste = null;
+  visualizar(true);
+  if (T.listo1) resolverLagrange(true);
+  if (T.listo1) dibujar();
+}
+
+/* ======================= MÓDULO 1 ======================= */
+function visualizar(silencioso) {
+  try {
+    const fStr = $('funcion').value.trim();
+    if (!fStr) throw new Error('Escriba la función de su problema.');
+    const px = numero($('px').value, 'el punto x₀'), py = numero($('py').value, 'el punto y₀');
+    const xmin = numero($('xmin').value, 'x mín'), xmax = numero($('xmax').value, 'x máx');
+    const ymin = numero($('ymin').value, 'y mín'), ymax = numero($('ymax').value, 'y máx');
+    if (xmin >= xmax) throw new Error('Se requiere x mín < x máx.');
+    if (ymin >= ymax) throw new Error('Se requiere y mín < y máx.');
+    if (px < xmin || px > xmax || py < ymin || py > ymax)
+      throw new Error('El punto de análisis queda fuera de la ventana. Amplíela para que \\(P_0\\) se vea.');
+
+    const f = compilar(fStr, 'la función f(x, y)');
+    f.evaluar(xmin + (xmax - xmin) / 3, ymin + (ymax - ymin) / 3);
+    T.fStr = fStr; T.f = f.evaluar;
+    T.xmin = xmin; T.xmax = xmax; T.ymin = ymin; T.ymax = ymax;
+    T.dfdx = math.simplify(math.derivative(f.nodo, 'x'));
+    T.dfdy = math.simplify(math.derivative(f.nodo, 'y'));
+    T.px = px; T.py = py;
+    T.gx = T.dfdx.evaluate({ x: px, y: py });
+    T.gy = T.dfdy.evaluate({ x: px, y: py });
+    T.listo1 = true;
+    $('recordatorioF').innerHTML = 'Función objetivo: \\( f(x,y)=' + texDe(fStr) + ' \\), tomada del módulo anterior.';
+    componer([$('recordatorioF')]);
+    if (!silencioso) {
+      dibujar();
+      avisar('a1', 'ok', 'Listo. La flecha roja en \\(P_0\\) muestra la dirección de máximo crecimiento, '
+        + 'y es perpendicular a la curva de nivel que pasa por el punto. '
+        + '<strong>Capture esta gráfica</strong>: es la evidencia del ítem III.');
+    }
+    return true;
+  } catch (e) {
+    T.listo1 = false;
+    if (!silencioso) avisar('a1', 'mal', e.message);
+    return false;
+  }
+}
+
+function comprobarCalculos() {
+  try {
+    exigeFuncion();
+    const magR = Math.hypot(T.gx, T.gy);
+    const uxR = magR > 0 ? T.gx / magR : 0, uyR = magR > 0 ? T.gy / magR : 0;
+    const bien = [], mal = [];
+
+    const expr = (id, correcta, nombre) => {
+      const v = ($(id).value || '').trim();
+      if (!v) return;
+      try {
+        const a = compilar(v, nombre);
+        (comparaExpresiones(a.evaluar, correcta) ? mal : bien).push(nombre);
+      } catch (_) { mal.push(nombre); }
+    };
+    expr('dfx', T.dfdx, '\\( \\partial f/\\partial x \\)');
+    expr('dfy', T.dfdy, '\\( \\partial f/\\partial y \\)');
+
+    const val = (id, correcto, nombre) => {
+      const v = ($(id).value || '').trim();
+      if (!v) return;
+      (coincide(v, correcto) ? bien : mal).push(nombre);
+    };
+    val('gx', T.gx, '\\( f_x(x_0,y_0) \\)');
+    val('gy', T.gy, '\\( f_y(x_0,y_0) \\)');
+    val('mag', magR, 'la magnitud');
+    val('ux', uxR, '\\( u_x \\)');
+    val('uy', uyR, '\\( u_y \\)');
+
+    if (!bien.length && !mal.length) {
+      avisar('a2', 'tip', 'No escribió nada para comprobar. Este apartado es opcional: puede seguir sin él.');
+      return;
+    }
+    if (!mal.length) {
+      avisar('a2', 'ok', '<strong>Todo coincide</strong> (' + bien.join(', ') + '). '
+        + 'Su procedimiento de los ítems I y II va bien; escríbalo en el Apéndice 2.');
+      return;
+    }
+    let m = '<strong>Revise ' + mal.join(', ') + '.</strong>';
+    if (bien.length) m += ' Lo demás coincide (' + bien.join(', ') + ').';
+    m += ' Recuerde que al derivar respecto de \\(x\\) la variable \\(y\\) se trata como constante, '
+       + 'que \\( \\|\\nabla f\\|=\\sqrt{f_x^2+f_y^2} \\) y que el vector unitario se obtiene dividiendo '
+       + 'cada componente entre esa magnitud.';
+    avisar('a2', 'mal', m);
+  } catch (e) { avisar('a2', 'mal', e.message); }
+}
+
+/* ======================= MÓDULO 2 ======================= */
+function resolverLagrange(silencioso) {
+  try {
+    exigeFuncion();
+    const gStr = $('restr').value.trim();
+    if (!gStr) throw new Error('Escriba la restricción g(x, y) de su problema.');
+    const cVal = numero($('restrC').value, 'el valor de c');
+    const sentido = $('sentido').value;
+    if (!sentido) throw new Error('Indique si su problema es de maximización o de minimización.');
+
+    const g = compilar(gStr, 'la restricción g(x, y)');
+    T.gStr = gStr; T.g = g.evaluar; T.cVal = cVal; T.sentido = sentido;
+    T.dgdx = math.simplify(math.derivative(g.nodo, 'x'));
+    T.dgdy = math.simplify(math.derivative(g.nodo, 'y'));
+
+    const sols = puntosLagrange();
+    T.soluciones = sols;
+    T.elegida = sols.length ? (sentido === 'min' ? sols[sols.length - 1] : sols[0]) : null;
+    T.listo2 = sols.length > 0;
+
+    if (!sols.length) {
+      $('tablaLagrange').innerHTML = '';
+      if (!silencioso) avisar('a3', 'mal', 'No se hallaron puntos que cumplan \\( \\nabla f=\\lambda\\,\\nabla g \\) '
+        + 'con \\( g(x,y)=' + fmt(cVal) + ' \\) dentro de la ventana. Amplíe la ventana en el módulo anterior '
+        + 'o revise la restricción.');
+      return false;
+    }
+
+    let html = '<table class="resultados"><thead><tr><th>#</th><th>\\(x\\)</th><th>\\(y\\)</th>'
+             + '<th>\\(f(x,y)\\)</th><th>\\(\\lambda\\)</th><th></th></tr></thead><tbody>';
+    sols.forEach((s, i) => {
+      const papel = sols.length === 1 ? '' : (i === 0 ? 'máximo' : (i === sols.length - 1 ? 'mínimo' : ''));
+      html += '<tr><td>' + (i + 1) + '</td><td>' + fmt(s.x) + '</td><td>' + fmt(s.y) + '</td><td>'
+            + fmt(s.f) + '</td><td>' + fmt(s.lam) + '</td><td class="etiqueta">' + papel + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    $('tablaLagrange').innerHTML = html;
+    componer([$('tablaLagrange')]);
+
+    if (!silencioso) {
+      dibujar();
+      const o = T.elegida;
+      avisar('a3', 'ok', 'El simulador halló <strong>' + sols.length + (sols.length === 1 ? ' punto' : ' puntos')
+        + '</strong> sobre la restricción. El que corresponde al ' + (sentido === 'min' ? 'mínimo' : 'máximo')
+        + ' es \\( (' + fmt(o.x) + ',\\;' + fmt(o.y) + ') \\), con \\( f=' + fmt(o.f) + ' \\) y \\( \\lambda='
+        + fmt(o.lam) + ' \\). Registre estos valores en el Apéndice 2 y capture la gráfica: eso es el ítem II. '
+        + 'Lectura de \\( \\lambda \\): si \\(c\\) pasara de \\(' + fmt(cVal) + '\\) a \\(' + fmt(cVal + 1)
+        + '\\), el valor óptimo cambiaría en torno a \\(' + fmt(o.lam) + '\\) unidades.');
+    }
+    return true;
+  } catch (e) {
+    T.listo2 = false; T.elegida = null;
+    $('tablaLagrange').innerHTML = '';
+    if (!silencioso) avisar('a3', 'mal', e.message);
+    return false;
+  }
+}
+
+function contrastar() {
+  try {
+    exigeFuncion();
+    if (!T.listo2) throw new Error('Resuelva primero con el simulador, en el apartado anterior: sin eso no hay con qué contrastar.');
+    const x = numero($('ox').value, 'la coordenada x*');
+    const y = numero($('oy').value, 'la coordenada y*');
+    const lam = numero($('ol').value, 'el multiplicador λ');
+
+    const partes = [];
+    const gv = T.g(x, y);
+    const sobreCurva = Math.abs(gv - T.cVal) <= Math.max(0.01, Math.abs(T.cVal) * 0.005);
+    const fx = T.dfdx.evaluate({ x, y }), fy = T.dfdy.evaluate({ x, y });
+    const gx = T.dgdx.evaluate({ x, y }), gy = T.dgdy.evaluate({ x, y });
+    const r1 = fx - lam * gx, r2 = fy - lam * gy;
+    const tol = Math.max(0.02, 0.01 * Math.max(Math.abs(fx), Math.abs(fy)));
+    const cumpleLagrange = Math.abs(r1) <= tol && Math.abs(r2) <= tol;
+
+    if (!sobreCurva) {
+      partes.push('Su punto <strong>no está sobre la restricción</strong>: allí \\( g=' + fmt(gv)
+        + ' \\) y debería valer \\( ' + fmt(T.cVal) + ' \\).');
+    } else {
+      partes.push('Su punto <strong>sí está sobre la restricción</strong>.');
+    }
+    if (!cumpleLagrange) {
+      partes.push('Con su \\( \\lambda=' + fmt(lam) + ' \\) queda \\( f_x-\\lambda g_x=' + fmt(r1)
+        + ' \\) y \\( f_y-\\lambda g_y=' + fmt(r2) + ' \\): las dos deberían ser cero.');
+    } else {
+      partes.push('Allí <strong>sí se cumple</strong> \\( \\nabla f=\\lambda\\,\\nabla g \\).');
+    }
+
+    let i = -1, dist = Infinity;
+    T.soluciones.forEach((s, k) => { const d = Math.hypot(s.x - x, s.y - y); if (d < dist) { dist = d; i = k; } });
+    const par = T.soluciones[i];
+    if (dist < 0.05) {
+      partes.push('<strong>Coincide con el punto ' + (i + 1) + ' del simulador</strong> \\( ('
+        + fmt(par.x) + ',\\;' + fmt(par.y) + ') \\), con \\( f=' + fmt(par.f) + ' \\) y \\( \\lambda='
+        + fmt(par.lam) + ' \\).');
+      if (T.elegida && par !== T.elegida) {
+        partes.push('Ojo: ese es un punto crítico válido, pero no es el que corresponde al '
+          + (T.sentido === 'min' ? 'mínimo' : 'máximo') + ' que pide su problema. Compare el valor de \\(f\\) en la tabla.');
+      }
+    } else {
+      partes.push('<strong>No coincide con ninguno</strong> de los puntos del simulador; el más cercano es el '
+        + (i + 1) + ', en \\( (' + fmt(par.x) + ',\\;' + fmt(par.y) + ') \\). Revise el despeje.');
+    }
+
+    const bien = sobreCurva && cumpleLagrange && dist < 0.05;
+    T.contraste = bien ? { x, y, lam } : null;
+    avisar('a4', bien ? 'ok' : 'tip', partes.join(' '));
+  } catch (e) { avisar('a4', 'mal', e.message); }
+}
+
+/* ======================= RESUMEN ======================= */
+function resumen() {
+  const L = [], v = id => ($(id).value || '').trim();
+  L.push('DATOS DEL SIMULADOR — Fase 2, Cálculo Multivariado (203057)');
+  L.push('');
+  if (T.listo1) {
+    L.push('ACTIVIDAD 2 · ítem III — Simulador de Gradiente');
+    L.push('  Función: f(x, y) = ' + v('funcion'));
+    L.push('  Punto de análisis: (' + fmt(T.px) + ', ' + fmt(T.py) + ')');
+    L.push('  Ventana: x ∈ [' + fmt(T.xmin) + ', ' + fmt(T.xmax) + '], y ∈ [' + fmt(T.ymin) + ', ' + fmt(T.ymax) + ']');
+    L.push('  (La captura de la gráfica es la evidencia del ítem III.)');
+    L.push('');
+  }
+  if (T.listo2 && T.soluciones.length) {
+    L.push('ACTIVIDAD 4 · ítems I y II — Simulador de Lagrange');
+    L.push('  Restricción: ' + v('restr') + ' = ' + v('restrC'));
+    L.push('  Tipo de problema: ' + (T.sentido === 'max' ? 'maximización' : 'minimización'));
+    L.push('  Puntos obtenidos mediante el simulador:');
+    T.soluciones.forEach((s, i) => {
+      const papel = T.soluciones.length === 1 ? '' : (i === 0 ? '  (máximo)' : (i === T.soluciones.length - 1 ? '  (mínimo)' : ''));
+      L.push('    (' + (i + 1) + ') x = ' + fmt(s.x) + ' ; y = ' + fmt(s.y) + ' ; f = ' + fmt(s.f) + ' ; λ = ' + fmt(s.lam) + papel);
+    });
+    if (T.elegida) {
+      L.push('  Óptimo que pide el problema: (' + fmt(T.elegida.x) + ', ' + fmt(T.elegida.y) + ')'
+           + ' con f = ' + fmt(T.elegida.f) + ' y λ = ' + fmt(T.elegida.lam));
+      L.push('  Lectura de λ: al relajar la restricción de c = ' + fmt(T.cVal) + ' a c = ' + fmt(T.cVal + 1)
+           + ', el valor óptimo cambia en torno a ' + fmt(T.elegida.lam) + ' unidades.');
+    }
+    L.push('');
+  }
+  if (v('ox') && v('oy') && v('ol')) {
+    L.push('ACTIVIDAD 4 · ítem III — contraste con la solución analítica');
+    L.push('  Solución analítica propia: (' + v('ox') + ', ' + v('oy') + ') con λ = ' + v('ol'));
+    L.push('  Resultado del contraste: ' + (T.contraste ? 'coincide con el simulador' : 'revisar — no coincide'));
+  }
+  if (L.length <= 2) L.push('(Todavía no ha usado el simulador.)');
+  return L.join('\n');
+}
+
+/* ======================= EVENTOS ======================= */
+$('b1').addEventListener('click', () => { visualizar(false); guardar(); });
+$('b2').addEventListener('click', () => { comprobarCalculos(); guardar(); });
+$('b3').addEventListener('click', () => { resolverLagrange(false); guardar(); });
+$('b4').addEventListener('click', () => { contrastar(); guardar(); });
+
+$('p1').addEventListener('click', () => avisar('a1', 'tip',
+  'La ventana debe contener el punto de la Tabla 4 y, si va a seguir con la Actividad 4, también la restricción '
+  + 'de la Tabla 6. Si la restricción es \\( x^2+y^2=9 \\), una ventana de \\(-4\\) a \\(4\\) en ambos ejes deja '
+  + 'ver toda la circunferencia.'));
+$('p3').addEventListener('click', () => avisar('a3', 'tip',
+  'Si la Tabla 6 dice \\( x+y=6 \\), entonces \\( g(x,y)=x+y \\) y \\( c=6 \\). El sentido lo da el enunciado de '
+  + 'su problema: no es lo mismo buscar el punto más caliente que minimizar un consumo.'));
+$('p4').addEventListener('click', () => avisar('a4', 'tip',
+  'De las dos primeras ecuaciones despeje \\( \\lambda \\) e iguálelas: \\( \\dfrac{f_x}{g_x}=\\dfrac{f_y}{g_y} \\). '
+  + 'Sustituya la relación resultante en \\( g(x,y)=c \\) y vuelva a cualquiera de las dos primeras para obtener '
+  + '\\( \\lambda \\). El ítem III pide ese despeje hecho a mano, no el del simulador.'));
+
+$('btnCopiar').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(resumen()); $('avisoCopia').textContent = 'Datos copiados: péguelos en el Apéndice 2 con Ctrl+V.'; }
+  catch (_) { $('avisoCopia').textContent = 'El navegador no permitió copiar. Seleccione el texto de la tabla y cópielo a mano.'; }
+});
+$('btnExportar').addEventListener('click', async () => {
+  const datos = {}; CAMPOS.forEach(id => { const el = $(id); if (el) datos[id] = el.value; });
+  const codigo = btoa(unescape(encodeURIComponent(JSON.stringify(datos))));
+  try { await navigator.clipboard.writeText(codigo); avisar('aAvance', 'ok', 'Código copiado. Péguelo en el otro equipo con el botón <strong>Pegar un código de avance</strong>.'); }
+  catch (_) {
+    $('cajaImportar').style.display = ''; $('codigo').value = codigo;
+    avisar('aAvance', 'tip', 'El navegador no permitió copiar. Seleccione el texto del recuadro y cópielo a mano.');
+  }
+});
+$('btnImportar').addEventListener('click', () => {
+  $('cajaImportar').style.display = $('cajaImportar').style.display === 'none' ? '' : 'none';
+  limpiarAviso('aAvance');
+});
+$('btnCargar').addEventListener('click', () => {
+  try {
+    const datos = JSON.parse(decodeURIComponent(escape(atob(($('codigo').value || '').trim()))));
+    CAMPOS.forEach(id => { const el = $(id); if (el && typeof datos[id] === 'string') el.value = datos[id]; });
+    recomponer(); guardar();
+    avisar('aAvance', 'ok', 'Avance cargado. Revise los dos módulos: el simulador rehízo los cálculos con lo que traía escrito.');
+  } catch (_) { avisar('aAvance', 'mal', 'Ese código no se pudo leer. Cópielo completo, sin espacios ni saltos de línea de más.'); }
+});
+$('btnBorrar').addEventListener('click', () => {
+  const b = $('btnBorrar');
+  if (!b.dataset.confirmar) {
+    b.dataset.confirmar = '1'; b.textContent = 'Confirmar: borrar todo';
+    avisar('aAvance', 'tip', 'Esto borra todo lo que ha escrito en este equipo y no se puede deshacer. Pulse otra vez para confirmar.');
+    setTimeout(() => { delete b.dataset.confirmar; b.textContent = 'Empezar de nuevo'; limpiarAviso('aAvance'); }, 8000);
+    return;
+  }
+  CAMPOS.forEach(id => { const el = $(id); if (el) el.value = ''; });
+  $('xmin').value = -1; $('xmax').value = 6; $('ymin').value = -1; $('ymax').value = 7;
+  try { localStorage.removeItem(CLAVE); } catch (_) {}
+  T.listo1 = false; T.listo2 = false; T.elegida = null; T.soluciones = []; T.contraste = null;
+  ['a1','a2','a3','a4'].forEach(limpiarAviso);
+  $('tablaLagrange').innerHTML = '';
+  Plotly.purge('grafica2d');
+  $('nota2d').textContent = 'Escriba su función y el punto de análisis, y pulse Visualizar.';
+  $('leyenda2d').innerHTML = '';
+  $('recordatorioF').textContent = 'La función objetivo es la que escribió en el módulo anterior.';
+  delete b.dataset.confirmar; b.textContent = 'Empezar de nuevo';
+  avisar('aAvance', 'ok', 'Listo: puede empezar de nuevo.');
+});
+
+[1, 2].forEach(n => {
+  $('mod' + n).querySelector('.encabezado').addEventListener('click', () => {
+    const el = $('mod' + n);
+    el.setAttribute('aria-expanded', el.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+    componer([el]);
+  });
+});
+CAMPOS.forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', programarGuardado);
+  if (el && el.tagName === 'SELECT') el.addEventListener('change', programarGuardado);
+});
+
+let temporizador = null;
+window.addEventListener('resize', () => {
+  if (!T.listo1) return;
+  clearTimeout(temporizador);
+  temporizador = setTimeout(() => { try { dibujar(); } catch (_) {} }, 250);
+});
+
+window.addEventListener('load', () => {
+  const habia = cargar();
+  setTimeout(() => {
+    if (habia) {
+      recomponer();
+      if (T.listo1) {
+        $('estadoGuardado').textContent = 'Recuperamos su trabajo anterior en este equipo.';
+        if (T.listo2) $('mod2').setAttribute('aria-expanded', 'true');
+      }
+    }
+    componer([document.body]);
+  }, 350);
+});
+</script>
+</body>
+</html>
