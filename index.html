@@ -294,6 +294,19 @@
             </div>
             <div class="aviso" id="a3"></div>
             <div id="tablaLagrange"></div>
+            <div id="cCaja" style="display:none;margin-top:.9rem;padding:.75rem .85rem;
+                 border:1px solid #d9dee7;border-radius:6px;background:#fbfcfe">
+              <div style="font-size:.86rem;font-weight:600;color:#003366;margin-bottom:.4rem">
+                ¿Qué pasa si la restricción se relaja? — mueva el valor de c</div>
+              <input type="range" id="cSlider" style="width:100%" step="0.01">
+              <div id="cLectura" style="font-size:.86rem;color:#374151;margin-top:.45rem"></div>
+              <div id="graficaC" style="width:100%;height:190px;margin-top:.5rem"></div>
+              <p class="nota" style="margin-top:.35rem">La pendiente de esta traza en su valor de c
+                es exactamente \( \lambda \): cuánto cambia el óptimo al relajar la restricción en
+                una unidad.</p>
+              <button class="btn sec" id="bCrestaurar" style="margin-top:.45rem;padding:.3rem .7rem;font-size:.82rem">
+                Volver a mi valor de c</button>
+            </div>
           </div>
 
           <div class="bloque">
@@ -396,6 +409,16 @@
         <div id="grafica2d" class="plot-box"></div>
         <div class="leyenda" id="leyenda2d"></div>
         <p class="nota" id="nota2d">Escriba su función y el punto de análisis, y pulse Visualizar.</p>
+        <div id="exploraCaja" style="display:none;margin-top:.5rem;padding:.6rem .75rem;
+             border:1px dashed #d9dee7;border-radius:6px;background:#fbfcfe">
+          <div style="font-size:.84rem;font-weight:600;color:#003366;margin-bottom:.25rem">
+            Explorador — arrastre sobre el gráfico</div>
+          <p id="exploraTexto" style="font-size:.84rem;color:#4b5563;margin:0">
+            Haga clic o arrastre dentro del gráfico: el punto de prueba se mueve y el gradiente
+            responde. La flecha siempre sale perpendicular a la curva de nivel que pasa por ahí.</p>
+          <button class="btn sec" id="bExp" style="margin-top:.5rem;padding:.3rem .7rem;font-size:.82rem">
+            Quitar el explorador</button>
+        </div>
       </div>
       <div class="card">
         <h2>¿Qué estoy viendo?</h2>
@@ -437,7 +460,8 @@ const T = {
   px: null, py: null, gx: null, gy: null,
   g: null, gStr: '', dgdx: null, dgdy: null, cVal: null, sentido: '',
   soluciones: [], elegida: null, curva: null,
-  listo1: false, listo2: false, contraste: null
+  listo1: false, listo2: false, contraste: null,
+  expX: null, expY: null, cOriginal: null, barrido: null
 };
 
 let colaMathJax = Promise.resolve();
@@ -656,6 +680,29 @@ function render2D() {
       line: { color: '#e8630a', width: 3.2 }, connectgaps: false, hoverinfo: 'skip', showlegend: false });
   }
 
+  if (T.expX !== null && isFinite(T.expX)) {
+    let ex, ey;
+    try { ex = T.dfdx.evaluate({ x: T.expX, y: T.expY }); ey = T.dfdy.evaluate({ x: T.expX, y: T.expY }); }
+    catch (_) { ex = ey = 0; }
+    const me = Math.hypot(ex, ey);
+    let fe = null; try { fe = T.f(T.expX, T.expY); } catch (_) {}
+    if (fe !== null && isFinite(fe)) {
+      const nivel = curvaDeNivel((a, b) => T.f(a, b), fe, v.x0, v.x1, v.y0, v.y1, 150);
+      if (nivel && nivel.x.length) trazas.push({ type: 'scatter', mode: 'lines', x: nivel.x, y: nivel.y,
+        line: { color: '#00b3a4', width: 2.4, dash: 'dot' }, connectgaps: false,
+        hoverinfo: 'skip', showlegend: false });
+    }
+    trazas.push({ type: 'scatter', mode: 'markers', x: [T.expX], y: [T.expY],
+      marker: { size: 11, color: '#00b3a4', line: { color: '#fff', width: 2 } },
+      hoverinfo: 'skip', showlegend: false });
+    if (me > 1e-12) {
+      const L = Math.min(v.x1 - v.x0, v.y1 - v.y0) * 0.2;
+      anot.push({ x: T.expX + ex / me * L, y: T.expY + ey / me * L, ax: T.expX, ay: T.expY,
+        xref: 'x', yref: 'y', axref: 'x', ayref: 'y', showarrow: true, arrowhead: 3,
+        arrowsize: 1.5, arrowwidth: 2.8, arrowcolor: '#00b3a4', text: '' });
+    }
+  }
+
   trazas.push({ type: 'scatter', mode: 'markers+text', x: [T.px], y: [T.py],
     marker: { size: 10, color: '#d62728', line: { color: '#fff', width: 1.5 } },
     text: ['P₀'], textposition: 'bottom center', textfont: { size: 13, color: '#d62728' },
@@ -692,6 +739,149 @@ function render2D() {
     yaxis: { title: 'y', range: [v.y0, v.y1], zeroline: false },
     annotations: anot, plot_bgcolor: '#fbfcfe', paper_bgcolor: '#fff', showlegend: false
   }, { responsive: true, displaylogo: false });
+}
+
+/* ======================= EXPLORADOR ======================= */
+/* Mueve un punto de prueba sobre el gráfico y el gradiente responde en vivo.
+   No muestra componentes ni magnitud: eso lo calcula el estudiante. */
+let arrastrando = false;
+
+function aDatos(evt) {
+  const gd = $('grafica2d');
+  const fl = gd && gd._fullLayout;
+  if (!fl || !fl.xaxis || !fl.yaxis) return null;
+  const caja = gd.getBoundingClientRect();
+  const px = evt.clientX - caja.left - fl.margin.l;
+  const py = evt.clientY - caja.top - fl.margin.t;
+  if (px < 0 || py < 0 || px > fl.width || py > fl.height) return null;
+  try { return { x: fl.xaxis.p2d(px), y: fl.yaxis.p2d(py) }; } catch (_) { return null; }
+}
+
+function moverExplorador(evt) {
+  if (!T.listo1) return;
+  const p = aDatos(evt);
+  if (!p) return;
+  T.expX = p.x; T.expY = p.y;
+  render2D();
+  let fe = null; try { fe = T.f(p.x, p.y); } catch (_) {}
+  $('exploraTexto').innerHTML = 'Punto de prueba: <b>(' + fmt(p.x) + ', ' + fmt(p.y) + ')</b>'
+    + (fe !== null && isFinite(fe) ? ' · \\( f = ' + fmt(fe) + ' \\)' : '')
+    + '<br><span style="color:#6b7280">La flecha turquesa es \\( \\nabla f \\) en ese punto, '
+    + 'siempre perpendicular a la curva de nivel punteada. Sus componentes y su magnitud '
+    + 'las calcula usted.</span>';
+  componer([$('exploraTexto')]);
+}
+
+function activarExplorador() {
+  const gd = $('grafica2d');
+  if (!gd || gd.dataset.explorador === 'si') return;
+  gd.dataset.explorador = 'si';
+  gd.addEventListener('mousedown', e => { arrastrando = true; moverExplorador(e); });
+  window.addEventListener('mouseup', () => { arrastrando = false; });
+  gd.addEventListener('mousemove', e => { if (arrastrando) moverExplorador(e); });
+  gd.addEventListener('touchstart', e => {
+    if (e.touches.length) { arrastrando = true; moverExplorador(e.touches[0]); }
+  }, { passive: true });
+  gd.addEventListener('touchmove', e => {
+    if (arrastrando && e.touches.length) moverExplorador(e.touches[0]);
+  }, { passive: true });
+  window.addEventListener('touchend', () => { arrastrando = false; });
+}
+
+function quitarExplorador() {
+  T.expX = T.expY = null;
+  render2D();
+  $('exploraTexto').innerHTML = 'Haga clic o arrastre dentro del gráfico: el punto de prueba se '
+    + 'mueve y el gradiente responde. La flecha siempre sale perpendicular a la curva de nivel '
+    + 'que pasa por ahí.';
+}
+
+/* ======================= DESLIZADOR DE c ======================= */
+/* Recorre valores de la restricción y traza f* frente a c: su pendiente es lambda. */
+function optimoEn(c) {
+  const guardado = T.cVal;
+  T.cVal = c;
+  const sols = puntosLagrange();
+  T.cVal = guardado;
+  if (!sols.length) return null;
+  return T.sentido === 'min' ? sols[sols.length - 1] : sols[0];
+}
+
+function prepararSliderC() {
+  if (!T.listo2 || T.cOriginal === null) return;
+  const c0 = T.cOriginal;
+  const amp = Math.max(Math.abs(c0) * 0.5, 1.5);
+  const lo = c0 - amp, hi = c0 + amp;
+  const s = $('cSlider');
+  s.min = lo; s.max = hi; s.value = c0; s.step = (hi - lo) / 200;
+
+  /* barrido con malla gruesa, para que sea rápido */
+  const N = 33, cs = [], fs = [];
+  for (let i = 0; i < N; i++) {
+    const c = lo + (hi - lo) * i / (N - 1);
+    const o = optimoEn(c);
+    if (o && isFinite(o.f)) { cs.push(c); fs.push(o.f); }
+  }
+  T.barrido = { c: cs, f: fs };
+  $('cCaja').style.display = 'block';
+  dibujarTrazaC(c0);
+  lecturaC(c0);
+}
+
+function dibujarTrazaC(c) {
+  if (!T.barrido) return;
+  const o = optimoEn(c);
+  const trazas = [{ type: 'scatter', mode: 'lines', x: T.barrido.c, y: T.barrido.f,
+    line: { color: '#003366', width: 2.6 }, hoverinfo: 'x+y', name: 'f*' }];
+  if (o) trazas.push({ type: 'scatter', mode: 'markers', x: [c], y: [o.f],
+    marker: { size: 11, color: '#ffcc00', symbol: 'star', line: { color: '#003366', width: 1.4 } },
+    hoverinfo: 'x+y', showlegend: false });
+  /* recta tangente: su pendiente es lambda */
+  if (o && isFinite(o.lam)) {
+    const d = (T.barrido.c[T.barrido.c.length - 1] - T.barrido.c[0]) * 0.18;
+    trazas.push({ type: 'scatter', mode: 'lines', x: [c - d, c + d],
+      y: [o.f - o.lam * d, o.f + o.lam * d],
+      line: { color: '#e8630a', width: 2, dash: 'dash' }, hoverinfo: 'skip', showlegend: false });
+  }
+  Plotly.react('graficaC', trazas, {
+    margin: { t: 10, r: 10, b: 34, l: 48 },
+    xaxis: { title: 'c', zeroline: false }, yaxis: { title: 'f*', zeroline: false },
+    plot_bgcolor: '#fff', paper_bgcolor: '#fff', showlegend: false
+  }, { responsive: true, displaylogo: false });
+}
+
+function lecturaC(c) {
+  const o = optimoEn(c);
+  if (!o) { $('cLectura').innerHTML = 'Con ese valor de c no se halla óptimo en la ventana.'; return; }
+  const dif = c - T.cOriginal;
+  $('cLectura').innerHTML =
+    '\\( c = ' + fmt(c) + ' \\) · óptimo en \\( (' + fmt(o.x) + ',\\; ' + fmt(o.y) + ') \\)'
+    + ' · \\( f^{*} = ' + fmt(o.f) + ' \\) · \\( \\lambda = ' + fmt(o.lam) + ' \\)'
+    + (Math.abs(dif) > 1e-9
+        ? '<br><span style="color:#6b7280">Respecto de su valor, la restricción se '
+          + (dif > 0 ? 'relajó' : 'ajustó') + ' en ' + fmt(Math.abs(dif))
+          + ' y el óptimo cambió en ' + fmt(o.f - (T.elegidaOriginalF !== undefined ? T.elegidaOriginalF : o.f))
+          + '.</span>'
+        : '<br><span style="color:#6b7280">Este es su valor de c.</span>');
+  componer([$('cLectura')]);
+}
+
+function moverC(v) {
+  const c = parseFloat(v);
+  if (!isFinite(c)) return;
+  T.cVal = c;
+  const o = optimoEn(c);
+  T.elegida = o;
+  T.curva = curvaDeNivel(T.g, c, T.vista.x0, T.vista.x1, T.vista.y0, T.vista.y1, 190);
+  render2D();
+  dibujarTrazaC(c);
+  lecturaC(c);
+}
+
+function restaurarC() {
+  if (T.cOriginal === null) return;
+  $('cSlider').value = T.cOriginal;
+  moverC(T.cOriginal);
 }
 
 /* ======================= GUARDADO ======================= */
@@ -749,6 +939,8 @@ function visualizar(silencioso) {
     T.listo1 = true;
     $('recordatorioF').innerHTML = 'Función objetivo: \\( f(x,y)=' + texDe(fStr) + ' \\), tomada del módulo anterior.';
     componer([$('recordatorioF')]);
+    $('exploraCaja').style.display = 'block';
+    activarExplorador();
     if (!silencioso) {
       dibujar();
       avisar('a1', 'ok', 'Listo. La flecha roja en \\(P_0\\) muestra la dirección de máximo crecimiento, '
@@ -829,6 +1021,8 @@ function resolverLagrange(silencioso) {
     T.soluciones = sols;
     T.elegida = sols.length ? (sentido === 'min' ? sols[sols.length - 1] : sols[0]) : null;
     T.listo2 = sols.length > 0;
+    T.cOriginal = cVal;
+    T.elegidaOriginalF = T.elegida ? T.elegida.f : undefined;
 
     if (!sols.length) {
       $('tablaLagrange').innerHTML = '';
@@ -872,6 +1066,8 @@ function contrastar() {
   try {
     exigeFuncion();
     if (!T.listo2) throw new Error('Resuelva primero con el simulador, en el apartado anterior: sin eso no hay con qué contrastar.');
+    /* el deslizador pudo mover c; se compara siempre contra el valor que el estudiante escribió */
+    if (T.cOriginal !== null && Math.abs(T.cVal - T.cOriginal) > 1e-12) restaurarC();
     const x = numero($('ox').value, 'la coordenada x*');
     const y = numero($('oy').value, 'la coordenada y*');
     const lam = numero($('ol').value, 'el multiplicador λ');
@@ -962,7 +1158,10 @@ function resumen() {
 /* ======================= EVENTOS ======================= */
 $('b1').addEventListener('click', () => { visualizar(false); guardar(); });
 $('b2').addEventListener('click', () => { comprobarCalculos(); guardar(); });
-$('b3').addEventListener('click', () => { resolverLagrange(false); guardar(); });
+$('b3').addEventListener('click', () => { resolverLagrange(false); prepararSliderC(); guardar(); });
+$('bExp').addEventListener('click', quitarExplorador);
+$('cSlider').addEventListener('input', e => moverC(e.target.value));
+$('bCrestaurar').addEventListener('click', restaurarC);
 $('b4').addEventListener('click', () => { contrastar(); guardar(); });
 
 $('p1').addEventListener('click', () => avisar('a1', 'tip',
