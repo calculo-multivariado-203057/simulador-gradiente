@@ -141,6 +141,14 @@
   .ayuda .marco p:last-child { margin-bottom: 0; }
   .ayuda .salida { background: #eef3f7; border-left: 3px solid var(--azul); border-radius: 0 6px 6px 0; padding: .55rem .75rem; margin: .55rem 0; }
   .ayuda .salida table { margin: .35rem 0 0; }
+
+    /* ── accesibilidad ── */
+    .sr-solo{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+      overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+    :focus-visible{outline:3px solid #e8630a;outline-offset:2px}
+    [role="img"]:focus-visible{outline:3px solid #e8630a;outline-offset:4px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;
+      transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -194,7 +202,7 @@
               <button class="btn" id="b1">Visualizar</button>
               <button class="btn suave" id="p1">Ver pista</button>
             </div>
-            <div class="aviso" id="a1"></div>
+            <div class="aviso" id="a1" aria-live="polite"></div>
           </div>
 
           <div class="bloque">
@@ -221,7 +229,7 @@
             <div class="acciones">
               <button class="btn suave" id="b2">Comprobar mis cálculos</button>
             </div>
-            <div class="aviso" id="a2"></div>
+            <div class="aviso" id="a2" aria-live="polite"></div>
           </div>
 
           <details class="ayuda">
@@ -292,15 +300,15 @@
               <button class="btn" id="b3">Resolver con el simulador</button>
               <button class="btn suave" id="p3">Ver pista</button>
             </div>
-            <div class="aviso" id="a3"></div>
-            <div id="tablaLagrange"></div>
+            <div class="aviso" id="a3" aria-live="polite"></div>
+            <div id="tablaLagrange" aria-live="polite"></div>
             <div id="cCaja" style="display:none;margin-top:.9rem;padding:.75rem .85rem;
                  border:1px solid #d9dee7;border-radius:6px;background:#fbfcfe">
               <div style="font-size:.86rem;font-weight:600;color:#003366;margin-bottom:.4rem">
                 ¿Qué pasa si la restricción se relaja? — mueva el valor de c</div>
-              <input type="range" id="cSlider" style="width:100%" step="0.01">
-              <div id="cLectura" style="font-size:.86rem;color:#374151;margin-top:.45rem"></div>
-              <div id="graficaC" style="width:100%;height:190px;margin-top:.5rem"></div>
+              <input type="range" id="cSlider" style="width:100%" step="0.01" aria-label="Constante de la restricción: mueva con las flechas para ver cómo se desplaza el óptimo">
+              <div id="cLectura" style="font-size:.86rem;color:#374151;margin-top:.45rem" aria-live="polite"></div>
+              <div id="graficaC" style="width:100%;height:190px;margin-top:.5rem" role="img" tabindex="0" aria-label="Curva del valor óptimo de la función frente a la constante de la restricción, con el punto actual y la recta tangente cuya pendiente es el multiplicador lambda."></div>
               <p class="nota" style="margin-top:.35rem">La pendiente de esta traza en su valor de c
                 es exactamente \( \lambda \): cuánto cambia el óptimo al relajar la restricción en
                 una unidad.</p>
@@ -323,7 +331,7 @@
               <button class="btn" id="b4">Contrastar</button>
               <button class="btn suave" id="p4">Ver pista</button>
             </div>
-            <div class="aviso" id="a4"></div>
+            <div class="aviso" id="a4" aria-live="polite"></div>
           </div>
 
           <details class="ayuda">
@@ -398,7 +406,7 @@
           <textarea id="codigo" placeholder="Pegue el código que copió en el otro equipo" spellcheck="false"></textarea>
           <div class="acciones"><button class="btn" id="btnCargar">Cargar</button></div>
         </div>
-        <div class="aviso" id="aAvance"></div>
+        <div class="aviso" id="aAvance" aria-live="polite"></div>
       </div>
     </div>
 
@@ -406,15 +414,15 @@
     <div class="columna-grafica">
       <div class="card">
         <h2>Curvas de nivel y campo gradiente</h2>
-        <div id="grafica2d" class="plot-box"></div>
+        <div id="grafica2d" class="plot-box" role="img" tabindex="0" aria-label="Plano con las curvas de nivel de la función, el campo de gradientes y, cuando hay restricción, la curva que la representa. Los valores numéricos del punto explorado aparecen en texto bajo la gráfica."></div>
         <div class="leyenda" id="leyenda2d"></div>
         <p class="nota" id="nota2d">Escriba su función y el punto de análisis, y pulse Visualizar.</p>
         <div id="exploraCaja" style="display:none;margin-top:.5rem;padding:.6rem .75rem;
              border:1px dashed #d9dee7;border-radius:6px;background:#fbfcfe">
           <div style="font-size:.84rem;font-weight:600;color:#003366;margin-bottom:.25rem">
             Explorador — arrastre sobre el gráfico</div>
-          <p id="exploraTexto" style="font-size:.84rem;color:#4b5563;margin:0">
-            Haga clic o arrastre dentro del gráfico: el punto de prueba se mueve y el gradiente
+          <p id="exploraTexto" aria-live="polite" style="font-size:.84rem;color:#4b5563;margin:0">
+            Haga clic o arrastre dentro del gráfico, o enfóquelo con el tabulador y use las flechas del teclado (con Mayús avanza más rápido): el punto de prueba se mueve y el gradiente
             responde. La flecha siempre sale perpendicular a la curva de nivel que pasa por ahí.</p>
           <button class="btn sec" id="bExp" style="margin-top:.5rem;padding:.3rem .7rem;font-size:.82rem">
             Quitar el explorador</button>
@@ -763,13 +771,46 @@ function moverExplorador(evt) {
   if (!p) return;
   T.expX = p.x; T.expY = p.y;
   render2D();
-  let fe = null; try { fe = T.f(p.x, p.y); } catch (_) {}
-  $('exploraTexto').innerHTML = 'Punto de prueba: <b>(' + fmt(p.x) + ', ' + fmt(p.y) + ')</b>'
+  lecturaExplorador();
+}
+
+/* la lectura del punto explorado, compartida por el ratón y el teclado */
+function lecturaExplorador() {
+  if (T.expX === null || T.expX === undefined) return;
+  let fe = null; try { fe = T.f(T.expX, T.expY); } catch (_) {}
+  $('exploraTexto').innerHTML = 'Punto de prueba: <b>(' + fmt(T.expX) + ', ' + fmt(T.expY) + ')</b>'
     + (fe !== null && isFinite(fe) ? ' · \\( f = ' + fmt(fe) + ' \\)' : '')
     + '<br><span style="color:#6b7280">La flecha turquesa es \\( \\nabla f \\) en ese punto, '
     + 'siempre perpendicular a la curva de nivel punteada. Sus componentes y su magnitud '
     + 'las calcula usted.</span>';
   componer([$('exploraTexto')]);
+}
+
+/* ═════════ explorador con teclado ═════════ */
+function exploradorTeclado(ev) {
+  const caja = $('exploraCaja');
+  if (!caja || caja.style.display === 'none') return;   // aún no habilitado
+  const paso = ev.shiftKey ? 5 : 1;
+  const gd = $('grafica2d'), fl = gd && gd._fullLayout;
+  if (!fl || !fl.xaxis || !fl.yaxis) return;
+  const anchoX = (fl.xaxis.range[1] - fl.xaxis.range[0]) / 60 * paso;
+  const anchoY = (fl.yaxis.range[1] - fl.yaxis.range[0]) / 60 * paso;
+  if (T.expX === null || T.expX === undefined) {
+    T.expX = (fl.xaxis.range[0] + fl.xaxis.range[1]) / 2;
+    T.expY = (fl.yaxis.range[0] + fl.yaxis.range[1]) / 2;
+  }
+  let movido = true;
+  switch (ev.key) {
+    case 'ArrowLeft':  T.expX -= anchoX; break;
+    case 'ArrowRight': T.expX += anchoX; break;
+    case 'ArrowDown':  T.expY -= anchoY; break;
+    case 'ArrowUp':    T.expY += anchoY; break;
+    default: movido = false;
+  }
+  if (!movido) return;
+  ev.preventDefault();
+  render2D();
+  lecturaExplorador();
 }
 
 function activarExplorador() {
@@ -1256,6 +1297,30 @@ window.addEventListener('load', () => {
     componer([document.body]);
   }, 350);
 });
+
+/* ═════════ accesibilidad: una sola imagen anunciada por gráfica ═════════ */
+(function(){
+  const g2d = document.getElementById('grafica2d');
+  if (g2d) g2d.addEventListener('keydown', exploradorTeclado);
+  function silenciar(caja){
+    caja.querySelectorAll('svg, canvas, .modebar').forEach(function(e){
+      e.setAttribute('aria-hidden','true');
+    });
+  }
+  function vigilar(){
+    document.querySelectorAll('[role="img"][aria-label]').forEach(function(caja){
+      if (caja.__vigilada) return;
+      caja.__vigilada = true;
+      silenciar(caja);
+      new MutationObserver(function(){ silenciar(caja); })
+        .observe(caja, {childList:true, subtree:true});
+    });
+  }
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', vigilar);
+  else vigilar();
+  setTimeout(vigilar, 1500);
+})();
 </script>
 </body>
 </html>
