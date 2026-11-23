@@ -166,7 +166,7 @@
       <div class="card" style="padding:.8rem 1.05rem">
         <p style="font-size:.86rem">
           Este simulador cubre los dos puntos del <strong>Apéndice 1</strong> que lo requieren: el
-          ítem III de la Actividad 2 y los ítems I, II y III de la Actividad 4. La superficie de la
+          numeral III de la Actividad 2 y los numerales I, II y III de la Actividad 4. La superficie de la
           Actividad 1 se construye en GeoGebra 3D, y el planteamiento de la Actividad 3 es trabajo
           analítico suyo.
         </p>
@@ -177,7 +177,7 @@
       <section class="modulo" id="mod1" aria-expanded="true">
         <div class="encabezado"><span class="marca">∇f</span>
           <span class="titulo"><span class="nombre">Simulador de Gradiente</span>
-          <span class="origen">Actividad 2 · ítem III</span></span></div>
+          <span class="origen">Actividad 2 · numeral III</span></span></div>
         <div class="contenido">
           <div class="bloque">
             <span class="item">Visualización</span>
@@ -208,7 +208,7 @@
           <div class="bloque">
             <span class="item opcional">Apoyo opcional</span>
             <h3>Compruebe lo que calculó a mano</h3>
-            <p class="consigna">Los ítems I y II de la Actividad 2 se resuelven a mano y se escriben en el
+            <p class="consigna">Los numerales I y II de la Actividad 2 se resuelven a mano y se escriben en el
             Apéndice 2. Si quiere, péguelos aquí y el simulador le dice si coinciden. Puede saltarse este
             apartado: no condiciona nada.</p>
             <div class="f2">
@@ -248,7 +248,7 @@
                 </tbody>
               </table>
               <p>Al pulsar <strong>Visualizar</strong> aparecen las curvas de nivel, el campo verde y la
-              flecha roja en \(P_0\). Esa gráfica es la evidencia del ítem III.</p>
+              flecha roja en \(P_0\). Esa gráfica es la evidencia del numeral III.</p>
             </div>
             <div class="marco">
               <p><strong>Y en la comprobación opcional:</strong> derivando a mano,
@@ -276,14 +276,14 @@
       <section class="modulo" id="mod2" aria-expanded="false">
         <div class="encabezado"><span class="marca">λ</span>
           <span class="titulo"><span class="nombre">Simulador de Lagrange</span>
-          <span class="origen">Actividad 4 · ítems I, II y III</span></span></div>
+          <span class="origen">Actividad 4 · numerales I, II y III</span></span></div>
         <div class="contenido">
           <div class="bloque">
             <span class="item">Ítems I y II</span>
             <h3>Ingrese la función objetivo y la restricción</h3>
             <p class="consigna">Escriba la restricción de la Tabla 6 en la forma \( g(x,y)=c \). El simulador
             resuelve el sistema y le entrega el punto o los puntos óptimos, el valor de la función en cada
-            uno y el multiplicador \( \lambda \), que es lo que el ítem II le pide registrar.</p>
+            uno y el multiplicador \( \lambda \), que es lo que el numeral II le pide registrar.</p>
             <p class="nota" id="recordatorioF">La función objetivo es la que escribió en el módulo anterior.</p>
             <div class="fr">
               <div><label for="restr">\( g(x,y) \)</label><input id="restr" type="text" placeholder="por ejemplo: x+y" spellcheck="false"></div>
@@ -351,7 +351,7 @@
                 </tbody>
               </table>
               <div class="salida">
-                <p style="margin:0"><strong>El simulador devuelve</strong> la tabla que el ítem II le
+                <p style="margin:0"><strong>El simulador devuelve</strong> la tabla que el numeral II le
                 pide registrar. Aquí sale un solo punto:</p>
                 <table>
                   <thead><tr><th>x</th><th>y</th><th>f(x, y)</th><th>λ</th></tr></thead>
@@ -376,7 +376,7 @@
               la restricción, que allí se cumple \( \nabla f=\lambda\,\nabla g \) y que coincide con
               el que él mismo obtuvo.</p>
             </div>
-            <p>El ítem IV no se resuelve aquí: la interpretación de \( \lambda \) y la decisión se
+            <p>El numeral IV no se resuelve aquí: la interpretación de \( \lambda \) y la decisión se
             escriben en el Apéndice 2. En este ejemplo, con \( \lambda=4 \), pasar el presupuesto de
             4 a 5 unidades subiría el óptimo de 108 a cerca de 112.</p>
           </details>
@@ -386,7 +386,7 @@
       <div class="card">
         <h2>Para su entrega</h2>
         <p style="font-size:.87rem">Capture la gráfica con la herramienta de recorte de su equipo: es la
-        evidencia del ítem III de la Actividad 2 y de los ítems I y II de la Actividad 4. El botón copia los
+        evidencia del numeral III de la Actividad 2 y de los numerales I y II de la Actividad 4. El botón copia los
         datos que entregó el simulador, para registrarlos en el Apéndice 2.</p>
         <button class="btn ancho" id="btnCopiar" style="margin-top:.6rem">Copiar los datos del simulador</button>
         <p class="nota" id="avisoCopia"></p>
@@ -986,7 +986,7 @@ function visualizar(silencioso) {
       dibujar();
       avisar('a1', 'ok', 'Listo. La flecha roja en \\(P_0\\) muestra la dirección de máximo crecimiento, '
         + 'y es perpendicular a la curva de nivel que pasa por el punto. '
-        + '<strong>Capture esta gráfica</strong>: es la evidencia del ítem III.');
+        + '<strong>Capture esta gráfica</strong>: es la evidencia del numeral III.');
     }
     return true;
   } catch (e) {
@@ -1031,7 +1031,7 @@ function comprobarCalculos() {
     }
     if (!mal.length) {
       avisar('a2', 'ok', '<strong>Todo coincide</strong> (' + bien.join(', ') + '). '
-        + 'Su procedimiento de los ítems I y II va bien; escríbalo en el Apéndice 2.');
+        + 'Su procedimiento de los numerales I y II va bien; escríbalo en el Apéndice 2.');
       return;
     }
     let m = '<strong>Revise ' + mal.join(', ') + '.</strong>';
@@ -1090,7 +1090,7 @@ function resolverLagrange(silencioso) {
       avisar('a3', 'ok', 'El simulador halló <strong>' + sols.length + (sols.length === 1 ? ' punto' : ' puntos')
         + '</strong> sobre la restricción. El que corresponde al ' + (sentido === 'min' ? 'mínimo' : 'máximo')
         + ' es \\( (' + fmt(o.x) + ',\\;' + fmt(o.y) + ') \\), con \\( f=' + fmt(o.f) + ' \\) y \\( \\lambda='
-        + fmt(o.lam) + ' \\). Registre estos valores en el Apéndice 2 y capture la gráfica: eso es el ítem II. '
+        + fmt(o.lam) + ' \\). Registre estos valores en el Apéndice 2 y capture la gráfica: eso es el numeral II. '
         + 'Lectura de \\( \\lambda \\): si \\(c\\) pasara de \\(' + fmt(cVal) + '\\) a \\(' + fmt(cVal + 1)
         + '\\), el valor óptimo cambiaría en torno a \\(' + fmt(o.lam) + '\\) unidades.');
     }
@@ -1163,15 +1163,15 @@ function resumen() {
   L.push('DATOS DEL SIMULADOR — Fase 2, Cálculo Multivariado (203057)');
   L.push('');
   if (T.listo1) {
-    L.push('ACTIVIDAD 2 · ítem III — Simulador de Gradiente');
+    L.push('ACTIVIDAD 2 · numeral III — Simulador de Gradiente');
     L.push('  Función: f(x, y) = ' + v('funcion'));
     L.push('  Punto de análisis: (' + fmt(T.px) + ', ' + fmt(T.py) + ')');
     L.push('  Ventana: x ∈ [' + fmt(T.xmin) + ', ' + fmt(T.xmax) + '], y ∈ [' + fmt(T.ymin) + ', ' + fmt(T.ymax) + ']');
-    L.push('  (La captura de la gráfica es la evidencia del ítem III.)');
+    L.push('  (La captura de la gráfica es la evidencia del numeral III.)');
     L.push('');
   }
   if (T.listo2 && T.soluciones.length) {
-    L.push('ACTIVIDAD 4 · ítems I y II — Simulador de Lagrange');
+    L.push('ACTIVIDAD 4 · numerales I y II — Simulador de Lagrange');
     L.push('  Restricción: ' + v('restr') + ' = ' + v('restrC'));
     L.push('  Tipo de problema: ' + (T.sentido === 'max' ? 'maximización' : 'minimización'));
     L.push('  Puntos obtenidos mediante el simulador:');
@@ -1188,7 +1188,7 @@ function resumen() {
     L.push('');
   }
   if (v('ox') && v('oy') && v('ol')) {
-    L.push('ACTIVIDAD 4 · ítem III — contraste con la solución analítica');
+    L.push('ACTIVIDAD 4 · numeral III — contraste con la solución analítica');
     L.push('  Solución analítica propia: (' + v('ox') + ', ' + v('oy') + ') con λ = ' + v('ol'));
     L.push('  Resultado del contraste: ' + (T.contraste ? 'coincide con el simulador' : 'revisar — no coincide'));
   }
@@ -1215,7 +1215,7 @@ $('p3').addEventListener('click', () => avisar('a3', 'tip',
 $('p4').addEventListener('click', () => avisar('a4', 'tip',
   'De las dos primeras ecuaciones despeje \\( \\lambda \\) e iguálelas: \\( \\dfrac{f_x}{g_x}=\\dfrac{f_y}{g_y} \\). '
   + 'Sustituya la relación resultante en \\( g(x,y)=c \\) y vuelva a cualquiera de las dos primeras para obtener '
-  + '\\( \\lambda \\). El ítem III pide ese despeje hecho a mano, no el del simulador.'));
+  + '\\( \\lambda \\). El numeral III pide ese despeje hecho a mano, no el del simulador.'));
 
 $('btnCopiar').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(resumen()); $('avisoCopia').textContent = 'Datos copiados: péguelos en el Apéndice 2 con Ctrl+V.'; }
